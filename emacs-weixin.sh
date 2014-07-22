@@ -1,1 +1,0 @@
-release/emacs-weixin.sh
