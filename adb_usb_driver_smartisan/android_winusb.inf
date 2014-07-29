@@ -25,6 +25,8 @@ HKR,,Icon,,-1
 ;Smartisan 0701
 %SingleAdbInterface%        = USB_Install, USB\VID_29A9&PID_701A
 %CompositeAdbInterface%     = USB_Install, USB\VID_29A9&PID_701A&MI_01
+%SingleAdbInterface%        = USB_Install, USB\VID_05c6&PID_9024
+%CompositeAdbInterface%     = USB_Install, USB\VID_05c6&PID_9024&MI_02
 %SingleAdbInterface%        = USB_Install, USB\VID_04e8&PID_6864
 %CompositeAdbInterface%     = USB_Install, USB\VID_04e8&PID_6864&MI_02
 %SingleAdbInterface%        = USB_Install, USB\VID_29A9&PID_701B
@@ -69,6 +71,8 @@ HKR,,Icon,,-1
 ;Smartisan 0701
 %SingleAdbInterface%        = USB_Install, USB\VID_29A9&PID_701A
 %CompositeAdbInterface%     = USB_Install, USB\VID_29A9&PID_701A&MI_01
+%SingleAdbInterface%        = USB_Install, USB\VID_05c6&PID_9024
+%CompositeAdbInterface%     = USB_Install, USB\VID_05c6&PID_9024&MI_02
 %SingleAdbInterface%        = USB_Install, USB\VID_04e8&PID_6864
 %CompositeAdbInterface%     = USB_Install, USB\VID_04e8&PID_6864&MI_02
 %SingleAdbInterface%        = USB_Install, USB\VID_29A9&PID_701B
