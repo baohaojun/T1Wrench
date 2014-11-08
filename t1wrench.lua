@@ -598,6 +598,8 @@ picture_to_weixin_share = function(pics, ...)
          adb_start_weixin_share('image')
          if using_adb_root then
              adb_event("sleep .5 adb-tap 141 597 sleep .5")
+         else
+             sleep(.5)
          end
       end
 
