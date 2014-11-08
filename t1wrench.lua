@@ -206,7 +206,7 @@ local function t1_weibo(window)
    if using_scroll_lock == 1 then
       adb_event{'key', 'scroll_lock', 991, 166}
    else
-      adb_event("adb-key SPACE adb-long-press 17 294 adb-tap 545 191 adb-tap 991 166")
+      adb_event("adb-tap 24 308 adb-key SPACE adb-long-press-800 17 294 adb-tap 545 191 adb-tap 991 166")
    end
 
 end
