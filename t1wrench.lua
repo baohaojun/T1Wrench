@@ -795,7 +795,7 @@ local function t1_spread_it()
    -- http://weibo.com/1611427581/BvnNk2PwH?from=page_1005051611427581_profile&wvr=6&mod=weibotime&type=comment
    -- http://m.weibo.cn/1809968333/3774599487375417
    adb_shell{"am", "start", "sinaweibo://detail?mblogid=BvnNk2PwH"}
-   adb_event("adb-tap 156 1876 sleep .1 adb-tap 911 1863")
+   adb_event("adb-tap 911 1863 adb-tap 156 1876 sleep .1")
    t1_post("#如果别人认为你还没有疯，那只是因为你还不够努力😼#")
 end
 
