@@ -5,6 +5,7 @@ local shell_quote, putclip, t1_post
 local picture_to_weixin_share, picture_to_weibo_share
 local adb_get_input_window_dump, adb_top_window
 local adb_start_weixin_share
+local t1_config
 
 -- variables
 local using_scroll_lock
@@ -12,6 +13,15 @@ local using_adb_root
 local adb_unquoter
 local is_windows = false
 local debug_set_x = ""
+local ime_height_ref = 874
+local default_width, default_height = 1080, 1920
+local init_width, init_height = 1080, 1920
+local app_width, app_height = 1080,1920
+local width_ratio, height_ratio = app_width / default_width,  app_height / default_height
+local using_smartisan_os
+local brand = "smartisan"
+local model = "T1"
+
 if package.config:sub(1, 1) == '/' then
    shell_quote = function (str)
       return "'" .. string.gsub(str, "'", "'\\''") .. "'"
@@ -117,8 +127,16 @@ local function adb_pipe(cmds)
 end
 
 local function adb_focused_window()
-   wdump = adb_pipe{"dumpsys", "window"}
-   return string.match(wdump, "mFocusedWindow[^}]*%s(%S+)}")
+   local wdump = adb_pipe{"dumpsys", "window"}
+   local match = string.match(wdump, "mFocusedWindow[^}]*%s(%S+)}")
+   if match then
+      return match
+   end
+   match = wdump:match("mTopFullscreenOpaqueWindowState=Window.-(%S+)%s+paused=false}")
+   if match then
+      return match
+   end
+   error("Can't find focused window: " .. wdump:sub(1, 20))
 end
 
 local function select_args(args)
@@ -143,20 +161,22 @@ local function adb_event(events)
       end
 
       if tonumber(events[i]) then
-         command_str = command_str .. ('input tap %d %d;'):format(events[i], events[i+1])
+         local add = ('input tap %d %d;'):format(events[i] * width_ratio, events[i+1] * height_ratio)
+         command_str = command_str .. add
          i = i + 2
       elseif events[i] == 'tap2' or events[i] == 'adb-tap-2' then
          i = i + 1
-         command_str = command_str .. ('input tap %d %d;'):format(events[i], events[i+1])
-         command_str = command_str .. ('input tap %d %d;'):format(events[i], events[i+1])
+         local add = ('input tap %d %d;'):format(events[i] * width_ratio, events[i+1] * height_ratio)
+         command_str = command_str .. add .. add
          i = i + 2
       elseif (events[i]):match('^adb%-long%-press') then
          ms = 500
          if (events[i]):match('^adb%-long%-press%-%d+') then
             ms = (events[i]):sub(#"adb-long-press-" + 1)
          end
-         command_str = command_str .. ('input touchscreen swipe %s %s %s %s %d;'):format(
-            events[i+1], events[i+2], events[i+1], events[i+2], ms)
+         command_str = command_str .. ('input touchscreen swipe %d %d %d %d %d;'):format(
+            events[i+1] * width_ratio, events[i+2] * height_ratio,
+            events[i+1] * width_ratio, events[i+2] * height_ratio, ms)
          i = i + 3
       elseif events[i] == 'key' or events[i] == 'adb-key' then
          command_str = command_str .. ('input keyevent %s;'):format(events[i+1]:upper())
@@ -169,8 +189,9 @@ local function adb_event(events)
          if (events[i]):match('adb%-swipe%-') then
             ms = (events[i]):sub(#'adb-swipe-' + 1)
          end
-         command_str = command_str .. ('input touchscreen swipe %s %s %s %s %d;'):format(
-            events[i+1], events[i+2], events[i+3], events[i+4], ms)
+         command_str = command_str .. ('input touchscreen swipe %d %d %d %d %d;'):format(
+            events[i+1] * width_ratio, events[i+2] * height_ratio,
+            events[i+3] * width_ratio, events[i+4] * height_ratio, ms)
          i = i + 5
       elseif events[i] == 'adb-tap' then
          i = i + 1
@@ -193,7 +214,7 @@ local function sleep(time)
    adb_shell{"sleep", time}
 end
 
-local function t1_weibo(window)
+local function weibo_text_share(window)
    if window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" then
       repost = select_args{'repost', 'comment'}
       if repost == 'repost' then
@@ -203,10 +224,12 @@ local function t1_weibo(window)
       end
       sleep(.5)
    end
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{'key', 'scroll_lock', 991, 166}
-   else
+   elseif using_smartisan_os then
       adb_event("adb-tap 24 308 adb-key SPACE adb-long-press-800 17 294 adb-tap 545 191 adb-tap 991 166")
+   else
+      adb_event("adb-key space adb-long-press-800 17 294 adb-tap-2 991 166")
    end
 
 end
@@ -253,6 +276,7 @@ adb_start_weixin_share = function(text_or_image)
          adb_event("adb-tap 88 170 sleep " .. (.2 * i))
          adb_shell("am start -n com.tencent.mm/com.tencent.mm.ui.LauncherUI")
       else
+         adb_event("adb-tap-2 88 170")
          break
       end
    end
@@ -273,47 +297,49 @@ local function t1_share_to_weixin(text)
    t1_post()
 end
 
-local function t1_weixin_new(window, text)
+local function weixin_text_share(window, text)
    if text then
       text = text:gsub("\n", "​\n")
    end
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{'key', 'scroll_lock', 961, 171}
-   else
+   elseif using_smartisan_os then
       adb_event(
          [[
                adb-key SPACE
                adb-tap
                adb-tap 117 283 adb-tap 117 283 adb-tap 325 170 adb-tap 860 155 adb-tap 961 171
       ]])
+   else
+      adb_event("adb-key space adb-long-press-800 111 369 adb-tap 97 265 adb-tap 991 166")
    end
 end
 
 local function t1_sms(window)
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{182, 1079, 'key', 'scroll_lock', 864, 921}
    else
-      adb_event("adb-tap 182 1079 sleep .8")
-
       local input_method, ime_height = adb_get_input_window_dump()
-      local ime_height_ref = 1920 - 1140
-      local ime_height_diff = ime_height - ime_height_ref
-      local y_double_click = 947  - ime_height_diff
-      local y_paste = 823 - ime_height_diff
+      if ime_height == 0 then
+         adb_event("adb-tap 182 1079 sleep .8")
+      end
+
+      local y_double_click = 928
+      local y_paste = 811
       local y_send = y_double_click
 
       adb_event(
          ([[
-               adb-long-press 522 %d
-               adb-tap 149 %d
-               adb-tap 919 %d
+                  adb-long-press-800 522 %d
+                  adb-tap 149 %d
+                  adb-tap 919 %d
          ]]):format(y_double_click, y_paste, y_send)
       )
    end
 end
 
 local function t1_google_plus(window)
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{467, 650, 'key', 'scroll_lock', 932, 1818}
    else
       adb_event(
@@ -326,25 +352,22 @@ local function t1_google_plus(window)
       ]])
 
       local input_method, ime_height = adb_get_input_window_dump()
-      local ime_height_ref = 1920 - 1140
-      local ime_height_diff = ime_height - ime_height_ref
-      local y_double_click = 947  - ime_height_diff
-      local y_paste = 823 - ime_height_diff
-      local y_send = 1062 - ime_height_diff
-
+      if ime_height ~= 0 then
+         adb_event("key back")
+      end
       adb_event(
-         ([[
+         [[
                adb-tap-2 105 464
                adb-tap 286 259
                adb-tap 875 255
-               adb-tap 922 %d
-         ]]):format(y_send)
+               adb-tap 922 1819
+         ]]
       )
    end
 end
 
 local function t1_smartisan_notes(window)
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{'key', 'scroll_lock', 940, 140, 933, 117, 323, 1272, 919, 123}
    else
       adb_event(
@@ -365,14 +388,14 @@ local function t1_mail(window)
       adb_tap_mid_bot()
       sleep(2)
    end
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{'key', 'scroll_lock'}
    else
 
       local input_method, ime_height = adb_get_input_window_dump()
-      local ime_height_ref = 1920 - 1140
-      local ime_height_diff = ime_height - ime_height_ref
-      local y_start_scroll = 1048 - ime_height_diff
+      local virtual_key_ratio = app_height / init_height
+      local ime_height_diff = ime_height / (init_height / default_height) - ime_height_ref
+      local y_start_scroll = 1022 / virtual_key_ratio - ime_height_diff
 
       adb_event(
          ([[
@@ -391,7 +414,7 @@ local function t1_mail(window)
 end
 
 local function t1_paste()
-   if using_scroll_lock == 1 then
+   if using_scroll_lock then
       adb_event{'key', 'scroll_lock'}
    else
       return "无法在此窗口内贴粘"
@@ -409,13 +432,13 @@ local function last(func)
 end
 
 adb_get_input_window_dump = function()
-   -- $(adb dumpsys window | perl -ne 'print if m/^\s*Window #\d+ Window\{[a-f0-9]* u0 InputMethod\}/i .. m/^\s*mHasSurface/')
+   -- $(adb dumpsys window | perl -ne 'print if m/^\s*Window #\d+ Window\{[a-f0-9]+.*\SInputMethod/i .. m/^\s*mHasSurface/')
    local dump = adb_pipe{'dumpsys', 'window'}
    local input_method = {}
    local started = false
    dump = split("\n", dump)
    for i = 1, #dump do
-      if not started and dump[i]:match("^%s*Window #%d+ Window{[a-f0-9]* u0 InputMethod}") then
+      if not started and dump[i]:match("^%s*Window #?%d* ?Window{[a-f0-9]+.*%sInputMethod") then
          started = true
       end
       if started == true then
@@ -427,15 +450,15 @@ adb_get_input_window_dump = function()
    end
    local input_window_dump = join("\n", input_method)
    local input_method = string.match(input_window_dump, "mHasSurface=true")
-   local ime_xy = last(string.gmatch(input_window_dump, "Requested w=1080 h=%d+"))
+   local ime_xy = last(string.gmatch(input_window_dump, "Requested w=%d+ h=%d+"))
    local ime_height = 0
-   if input_method and ime_xy:match('Requested w=1080 h=') then
-      ime_height = ime_xy:sub(#'Requested w=1080 h=' + 1)
-      if ime_height == '1525' then -- this is latin input method, it's wrong
-         ime_height = 800
-      elseif tonumber(ime_height) >= 1200 then -- new version of google pinyin ime?
+   if input_method and ime_xy:match('Requested w=%d+ h=') then
+      ime_height = ime_xy:match('Requested w=%d+ h=(%d+)')
+      if tonumber((ime_height - (init_height - app_height)) * default_height / init_height ) >= 1200 then -- new version of google pinyin ime?
          if input_window_dump:match('package=com.google.android.inputmethod.pinyin') then
-            ime_height = 1920 - 1140
+            ime_height = (1920 - 1140) * init_height / default_height + (init_height - app_height)
+         elseif input_window_dump:match('package=com.google.android.inputmethod.latin') then
+            ime_height = 800 * init_height / default_height + (init_height - app_height)
          end
       end
    end
@@ -461,7 +484,7 @@ putclip = function(text)
    end
    file:write(text)
    file:close()
-   system{'adb', 'push', path, '/sdcard/putclip.txt'}
+   system{'the-true-adb', 'push', path, '/sdcard/putclip.txt'}
    adb_shell(
       [[
                am startservice --user 0 -n com.bhj.setclip/.PutClipService&
@@ -476,6 +499,66 @@ putclip = function(text)
       ]])
 end
 
+t1_config = function()
+   -- install the apk
+   local setclip_phone_md5 = adb_pipe("cat /sdcard/t1wrench-setclip.md5")
+   local setclip_local_md5 = io.open("setclip.apk.md5"):read("*a")
+   debug("on phone: %s, local: %s", setclip_phone_md5, setclip_local_md5)
+   if setclip_phone_md5 ~= setclip_local_md5 then
+      local install_output = io.popen("adb install -r SetClip.apk"):read("*a")
+      if install_output:match("\nSuccess\r?\n") then
+         system("adb push setclip.apk.md5 /sdcard/t1wrench-setclip.md5")
+         local setclip_phone_md5 = adb_pipe("cat /sdcard/t1wrench-setclip.md5")
+         local setclip_local_md5 = io.open("setclip.apk.md5"):read("*a")
+         if setclip_phone_md5 ~= setclip_local_md5 then
+            error("Can't mark the setclip.apk as been installed")
+         end
+      else
+         error("Install setclip.apk failed, 不能操作剪贴板, output is " .. install_output)
+      end
+   end
+
+   local sdk_version = adb_pipe("getprop ro.build.version.sdk")
+   brand = adb_pipe("getprop ro.product.brand"):gsub("\n.*", "")
+   model = adb_pipe("getprop ro.product.model"):gsub("\n.*", "")
+
+   if tonumber(sdk_version) < 18 then
+       error("Error, you phone's sdk version is " .. sdk_version .. ",  must be at least 18")
+   end
+   local dump = adb_pipe{'dumpsys', 'window'}
+   init_width = dump:match('init=(%d+x%d+)')
+   init_height = tonumber(init_width:match('x(%d+)'))
+   init_width = tonumber(init_width:match('(%d+)x'))
+
+   app_width = dump:match('app=(%d+x%d+)')
+   app_height = app_width:match('x(%d+)')
+   app_width = app_width:match('(%d+)x')
+   width_ratio, height_ratio = app_width / default_width,  app_height / default_height
+
+
+   if brand:match("smartisan") then
+      using_smartisan_os = true
+   else
+      using_smartisan_os = false
+   end
+
+   local id = adb_pipe("id")
+   if id:match("uid=0") then
+      using_adb_root = true
+   else
+      using_adb_root = false
+   end
+
+   local scroll = adb_pipe("getprop persist.smartisan.pastetool")
+   if scroll:match("1") then
+      debug("pastetool is true")
+      using_scroll_lock = true
+   else
+      using_scroll_lock = false
+      debug("pastetool is false")
+   end
+end
+
 t1_post = function(text) -- use weixin
    if text then
       putclip(text)
@@ -483,10 +566,10 @@ t1_post = function(text) -- use weixin
    local window = adb_focused_window()
    if window then print("window is " .. window) end
    if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" then
-      t1_weibo(window)
+      weibo_text_share(window)
       return
    elseif window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsUploadUI" or window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsCommentUI" then
-      t1_weixin_new(window, text)
+      weixin_text_share(window, text)
       return
    elseif window == "SmsPopupDialog" then
       t1_sms(window)
@@ -531,7 +614,7 @@ t1_post = function(text) -- use weixin
          post_button = '954 166'
       end
 
-      if using_scroll_lock == 1 then
+      if using_scroll_lock then
          adb_event(string.format("%s key scroll_lock %s", add, post_button))
       else
          if not input_method then
@@ -542,22 +625,32 @@ t1_post = function(text) -- use weixin
                ]]
             )
          end
-         local input_method, ime_height = adb_get_input_window_dump()
-         local ime_height_ref = 1920 - 1140
-         local ime_height_diff = ime_height - ime_height_ref
-         local y_double_click = 1073 - ime_height_diff
-         local y_select_all = 917 - ime_height_diff
-         local y_paste = 936 - ime_height_diff
-         local y_send = 1041 - ime_height_diff
 
-         adb_event(
-            ([[
+         local input_method, ime_height = adb_get_input_window_dump()
+         local virtual_key_ratio = app_height / init_height
+         local ime_height_diff = ime_height / (init_height / default_height) - ime_height_ref
+         local y_double_click = 951 / virtual_key_ratio - ime_height_diff
+         local y_select_all = 862 / virtual_key_ratio - ime_height_diff
+         local y_paste = y_select_all
+         local y_send = (945 - ((default_height - init_height) / 70 + (init_height - app_height - 44) / 22)) / virtual_key_ratio - ime_height_diff
+
+         if using_smartisan_os then
+            adb_event(
+               ([[
                 adb-tap 560 1840 adb-tap-2 560 %d adb-tap 296 %d adb-tap 888 %d adb-tap 976 %d
             ]]):format(y_double_click, y_select_all, y_paste, y_send)
-         )
+            )
+         else
+            debug("not using smartisan os")
+            adb_event(
+               ([[
+                        adb-tap 560 1824 adb-long-press-800 353 %d adb-tap 220 %d adb-tap 995 %d
+               ]]):format(y_double_click, y_paste, y_send)
+            )
+         end
       end
    end
-   return "text sent\n"
+   return "text sent"
 end
 
 local function upload_pics(...)
@@ -567,7 +660,7 @@ local function upload_pics(...)
             for x in /sdcard/DCIM/Camera/t1wrench-*; do
                if test -e "$x"; then
                   rm -f "$x";
-                  am startservice -n com.bhj.setclip/.PutClipService --es picture "$x";
+                  am startservice --user 0 -n com.bhj.setclip/.PutClipService --es picture "$x";
                fi;
             done
    ]])
@@ -579,8 +672,8 @@ local function upload_pics(...)
       local ext = last(pics[i]:gmatch("%.[^.]+"))
       local target = ('/sdcard/DCIM/Camera/t1wrench-%d-%d%s'):format(time, i, ext)
       targets[#targets + 1] = target
-      system{'adb', 'push', pics[i], target}
-      adb_shell{"am", "startservice", "-n", "com.bhj.setclip/.PutClipService", "--es", "picture", target}
+      system{'the-true-adb', 'push', pics[i], target}
+      adb_shell{"am", "startservice", "--user", "0", "-n", "com.bhj.setclip/.PutClipService", "--es", "picture", target}
    end
    return targets
 end
@@ -635,8 +728,12 @@ picture_to_weibo_share = function(pics, ...)
       local target = pics[i]
 
       if i == 1 then
-         adb_shell("am start -n com.sina.weibo/com.sina.weibo.EditActivity")
-         adb_event("sleep .5 key back sleep .5 adb-tap 62 1843 sleep 2")
+         adb_shell("am start -n com.sina.weibo/com.sina.weibo.EditActivity; sleep .5")
+         local input_method, ime_height = adb_get_input_window_dump()
+         if ime_height ~= 0 then
+            adb_event("key back")
+         end
+         adb_event("sleep .5 adb-tap 62 1843 sleep 2")
       end
 
       local pic_share_buttons = {
@@ -656,6 +753,10 @@ local function picture_to_weixin_chat(pics, ...)
    end
 
    local input_method, ime_height = adb_get_input_window_dump()
+   if (ime_height ~= 0) then
+       ime_height = 0
+       adb_event("key back")
+   end
    local post_button = ('984 %d'):format(1920 - ime_height - 50)
    for i = 1, #pics do
       local ext = last(pics[i]:gmatch("%.[^.]+"))
@@ -683,6 +784,10 @@ local function picture_to_qq_chat(pics, ...)
    end
 
    local input_method, ime_height = adb_get_input_window_dump()
+   if (ime_height ~= 0) then
+       ime_height = 0
+       adb_event("key back")
+   end
    local post_button = ('159 %d'):format(1920 - ime_height - 50)
    for i = 1, #pics do
       local ext = last(pics[i]:gmatch("%.[^.]+"))
@@ -713,6 +818,10 @@ local function picture_to_qqlite_chat(pics, ...)
    end
 
    local input_method, ime_height = adb_get_input_window_dump()
+   if (ime_height ~= 0) then
+       ime_height = 0
+       adb_event("key back")
+   end
    local post_button = ('984 %d'):format(1920 - ime_height - 50)
    for i = 1, #pics do
       local ext = last(pics[i]:gmatch("%.[^.]+"))
@@ -743,6 +852,10 @@ local function picture_to_weibo_chat(pics, ...)
    end
 
    local input_method, ime_height = adb_get_input_window_dump()
+   if (ime_height ~= 0) then
+       ime_height = 0
+       adb_event("key back")
+   end
    local post_button = ('984 %d'):format(1920 - ime_height - 50)
    for i = 1, #pics do
       local ext = last(pics[i]:gmatch("%.[^.]+"))
@@ -780,14 +893,18 @@ local function t1_picture(...)
    else
       return "Error: can't decide where to share"
    end
-   return #pics .. " pictures sent\n"
+   return #pics .. " pictures sent"
 end
 
 local function t1_follow_me()
    -- http://weibo.com/u/1611427581 (baohaojun)
    -- http://weibo.com/u/1809968333 (beagrep)
    adb_shell{"am", "start", "-n", "com.sina.weibo/.ProfileInfoActivity", "--es", "uid", "1611427581"}
-   adb_event("sleep 1 adb-tap 659 875 key back")
+   if init_width < 720 then
+      adb_event("sleep 1 adb-tap 659 950 key back")
+   else
+      adb_event("sleep 1 adb-tap 659 880 key back")
+   end
 end
 
 local function t1_spread_it()
@@ -795,8 +912,14 @@ local function t1_spread_it()
    -- http://weibo.com/1611427581/BvnNk2PwH?from=page_1005051611427581_profile&wvr=6&mod=weibotime&type=comment
    -- http://m.weibo.cn/1809968333/3774599487375417
    adb_shell{"am", "start", "sinaweibo://detail?mblogid=BvnNk2PwH"}
-   adb_event("adb-tap 911 1863 adb-tap 156 1876 sleep .1")
-   t1_post("#如果别人认为你还没有疯，那只是因为你还不够努力😼#")
+   adb_event("sleep 1 adb-tap 911 1863 adb-tap 156 1876 sleep .1")
+   if using_smartisan_os then
+      t1_post("#如果别人认为你还没有疯，那只是因为你还不够努力😼#")
+   elseif brand:match("Xiaomi") then
+      t1_post("我在小米手机上用Smartisan T1小扳手，赞！下一台手机考虑换Smartisan T1吧😼")
+   else
+     t1_post(("我在%s的%s手机上用Smartisan T1小扳手，赞！下一台手机考虑换Smartisan T1吧😼"):format(brand, model))
+   end
 end
 
 local M = {}
@@ -812,9 +935,11 @@ M.picture_to_weibo_share = picture_to_weibo_share_upload
 M.picture_to_weixin_share = picture_to_weixin_share_upload
 M.t1_spread_it = t1_spread_it
 M.adb_start_weixin_share = adb_start_weixin_share
+M.t1_config = t1_config
 
 if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
    -- t1_post(join(' ', arg))
+   t1_config()
    if type(M[arg[1]]) == 'function' then
       _G.M = M
       cmd = "M[arg[1]]("
@@ -838,7 +963,7 @@ if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
    -- adb_unquoter = arg[#arg]
    -- arg[#arg] = nil
    adb_shell(arg)
-   -- system{'adb', 'push', arg[1], "/sdcard/1.txt"}
+   -- system{'the-true-adb', 'push', arg[1], "/sdcard/1.txt"}
 else
    return M
 end
