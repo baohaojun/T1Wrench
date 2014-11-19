@@ -6,9 +6,9 @@ local picture_to_weixin_share, picture_to_weibo_share
 local adb_get_input_window_dump, adb_top_window
 local adb_start_weixin_share
 local t1_config, check_phone
-
+local emoji_for_qq, debug
 -- variables
-local using_scroll_lock
+local using_scroll_lock = true
 local using_adb_root
 local adb_unquoter
 local is_windows = false
@@ -18,9 +18,32 @@ local default_width, default_height = 1080, 1920
 local init_width, init_height = 1080, 1920
 local app_width, app_height = 1080,1920
 local width_ratio, height_ratio = app_width / default_width,  app_height / default_height
-local using_smartisan_os
+local using_smartisan_os = true
+local using_xiaomi_os = false
 local brand = "smartisan"
 local model = "T1"
+local qq_emojis
+local sdk_version = 19
+
+
+
+local qq_emoji_table = {
+   "微笑", "撇嘴", "色", "发呆", "得意", "流泪", "害羞", "闭嘴", "睡", "大哭",
+   "尴尬", "发怒", "调皮", "呲牙", "惊讶", "难过", "酷", "冷汗", "抓狂", "吐",
+   "偷笑", "可爱", "白眼", "傲慢", "饥饿", "困", "惊恐", "流汗", "憨笑", "大兵",
+   "奋斗", "咒骂", "疑问", "嘘", "晕", "折磨", "衰", "骷髅", "敲打", "再见",
+   "擦汗", "抠鼻", "鼓掌", "糗大了", "坏笑", "左哼哼", "右哼哼", "哈欠", "鄙视",
+   "委屈", "快哭了", "阴险", "亲亲", "吓", "可怜", "菜刀", "西瓜", "啤酒",
+   "篮球", "乒乓", "咖啡", "饭", "猪头", "玫瑰", "凋谢", "示爱", "爱心", "心碎",
+   "蛋糕", "闪电", "炸弹", "刀", "足球", "瓢虫", "便便", "月亮", "太阳", "礼物",
+   "拥抱", "强", "弱", "握手", "胜利", "抱拳", "勾引", "拳头", "差劲", "爱你",
+   "NO", "OK", "爱情", "飞吻", "跳跳", "发抖", "怄火", "转圈", "磕头", "回头",
+   "跳绳", "挥手", "激动", "街舞", "献吻", "左太极", "右太极",
+}
+
+for i in ipairs(qq_emoji_table) do
+   qq_emoji_table[qq_emoji_table[i]] = i;
+end
 
 if package.config:sub(1, 1) == '/' then
    shell_quote = function (str)
@@ -40,6 +63,31 @@ else -- windows
    is_windows = true
 end
 
+
+emoji_for_qq = function(text)
+   local s = 1
+   local replace = ""
+   repeat
+      local fs, fe = text:find("%[.-%]", s)
+      if fs then
+         local emoji = text:sub(fs + 1, fe - 1)
+         if qq_emoji_table[emoji] then
+            replace = replace .. text:sub(s, fs - 1)
+            local idx = qq_emoji_table[emoji]
+            replace = replace .. qq_emojis[idx]
+            s = fe + 1
+         else
+            replace = replace .. text:sub(s, fs)
+            s = fs + 1
+         end
+      else
+         replace = replace .. text:sub(s)
+         break
+      end
+   until s > #text
+   return replace
+end
+
 local function system(cmds)
    if type(cmds) == 'string' then
       os.execute(cmds)
@@ -56,7 +104,7 @@ local function system(cmds)
    end
 end
 
-local function debug(fmt, ...)
+debug = function(fmt, ...)
    print(string.format(fmt, ...))
 end
 
@@ -136,6 +184,9 @@ local function adb_focused_window()
    if match then
       return match
    end
+   if check_phone() or true then
+      return adb_focused_window()
+   end
    error("Can't find focused window: " .. wdump:sub(1, 20))
 end
 
@@ -174,24 +225,46 @@ local function adb_event(events)
          if (events[i]):match('^adb%-long%-press%-%d+') then
             ms = (events[i]):sub(#"adb-long-press-" + 1)
          end
-         command_str = command_str .. ('input touchscreen swipe %d %d %d %d %d;'):format(
+         if sdk_version < 18 then
+            ms = ""
+         end
+         local add = ('input touchscreen swipe %d %d %d %d %s;'):format(
             events[i+1] * width_ratio, events[i+2] * height_ratio,
             events[i+1] * width_ratio, events[i+2] * height_ratio, ms)
+         if sdk_version < 17 then
+            add = add:gsub("touchscreen ", "")
+         end
+         command_str = command_str .. add
+
+         if sdk_version < 18 then
+            command_str = command_str .. add
+         end
          i = i + 3
       elseif events[i] == 'key' or events[i] == 'adb-key' then
          command_str = command_str .. ('input keyevent %s;'):format(events[i+1]:upper())
          i = i + 2
       elseif events[i] == 'sleep' then
-         command_str = command_str .. ('sleep %s;'):format(events[i+1])
+         command_str = command_str .. ('sleep %s || busybox sleep %s;'):format(events[i+1], events[i+1])
          i = i + 2
       elseif events[i] == 'swipe' or (events[i]):match('adb%-swipe%-') then
          ms = 500
          if (events[i]):match('adb%-swipe%-') then
             ms = (events[i]):sub(#'adb-swipe-' + 1)
          end
-         command_str = command_str .. ('input touchscreen swipe %d %d %d %d %d;'):format(
+         if sdk_version < 18 then
+            ms = ""
+         end
+
+         local add = ('input touchscreen swipe %d %d %d %d %s;'):format(
             events[i+1] * width_ratio, events[i+2] * height_ratio,
             events[i+3] * width_ratio, events[i+4] * height_ratio, ms)
+         if sdk_version < 17 then
+            add = add:gsub("touchscreen ", "")
+         end
+         command_str = command_str .. add
+         if sdk_version < 18 then
+            command_str = command_str .. add
+         end
          i = i + 5
       elseif events[i] == 'adb-tap' then
          i = i + 1
@@ -211,7 +284,7 @@ local function adb_tap_mid_bot()
 end
 
 local function sleep(time)
-   adb_shell{"sleep", time}
+   adb_shell(("sleep %s || busybox sleep %s"):format(time, time))
 end
 
 local function weibo_text_share(window)
@@ -228,6 +301,8 @@ local function weibo_text_share(window)
       adb_event{'key', 'scroll_lock', 991, 166}
    elseif using_smartisan_os then
       adb_event("adb-tap 24 308 adb-key SPACE adb-long-press-800 17 294 adb-tap 545 191 adb-tap 991 166")
+   elseif using_xiaomi_os then
+      adb_event("adb-tap-2 24 308 sleep .1 adb-tap 77 179 adb-tap 991 166")
    else
       adb_event("adb-key space adb-long-press-800 17 294 adb-tap-2 991 166")
    end
@@ -310,6 +385,8 @@ local function weixin_text_share(window, text)
                adb-tap
                adb-tap 117 283 adb-tap 117 283 adb-tap 325 170 adb-tap 860 155 adb-tap 961 171
       ]])
+   elseif using_xiaomi_os then
+      adb_event("adb-long-press-800 422 270 adb-tap 147 213 adb-tap 1007 134")
    else
       adb_event("adb-key space adb-long-press-800 111 369 adb-tap 97 265 adb-tap 991 166")
    end
@@ -476,12 +553,21 @@ local function adb_input_method_is_null()
 end
 
 check_phone = function()
-   if not adb_pipe("uname"):match("Linux") then
+   if not adb_pipe("uname || busybox uname"):match("Linux") then
       error("Error: can't put text on phone, not connected?")
    end
 end
 
 putclip = function(text)
+   if not text and os.getenv("PUTCLIP_ANDROID_FILE") then
+      local file = io.open(os.getenv("PUTCLIP_ANDROID_FILE"))
+      text = file:read("*a")
+      file:close()
+      local window = adb_focused_window()
+      if window:match("com.tencent.mobileqq") then
+         text = emoji_for_qq(text)
+      end
+   end
    local file, path
    local tmp = os.getenv("TEMP") or "/tmp"
    path = tmp .. package.config:sub(1, 1) .. "lua-smartisan-t1.txt"
@@ -498,7 +584,7 @@ putclip = function(text)
                am startservice --user 0 -n com.bhj.setclip/.PutClipService&
                for x in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
                   if test -e /sdcard/putclip.txt; then
-                     sleep .1;
+                     sleep .1 || busybox sleep .1;
                      echo $x;
                   else
                      exit;
@@ -510,7 +596,7 @@ end
 t1_config = function()
    -- install the apk
    system("adb devices")
-   local uname = adb_pipe("uname")
+   local uname = adb_pipe("uname || busybox uname")
    if not uname:match("Linux") then
       error("No phone found, can't set up.")
    end
@@ -535,12 +621,14 @@ t1_config = function()
       end
    end
 
-   local sdk_version = adb_pipe("getprop ro.build.version.sdk")
+   sdk_version = adb_pipe("getprop ro.build.version.sdk")
    brand = adb_pipe("getprop ro.product.brand"):gsub("\n.*", "")
    model = adb_pipe("getprop ro.product.model"):gsub("\n.*", "")
 
-   if tonumber(sdk_version) < 18 then
-       error("Error, you phone's sdk version is " .. sdk_version .. ",  must be at least 18")
+   debug("sdk is %s\nbrand is %s\nmodel is %s\n", sdk_version, brand, model)
+   sdk_version = tonumber(sdk_version)
+   if tonumber(sdk_version) < 16 then
+       error("Error, you phone's sdk version is " .. sdk_version .. ",  must be at least 16")
    end
    local dump = adb_pipe{'dumpsys', 'window'}
    init_width = dump:match('init=(%d+x%d+)')
@@ -557,6 +645,12 @@ t1_config = function()
       using_smartisan_os = true
    else
       using_smartisan_os = false
+   end
+
+   if brand:match("Xiaomi") then
+      using_xiaomi_os = true
+   else
+      using_xiaomi_os = false
    end
 
    local id = adb_pipe("id")
@@ -577,10 +671,14 @@ t1_config = function()
 end
 
 t1_post = function(text) -- use weixin
-   if text then
-      putclip(text)
-   end
    local window = adb_focused_window()
+   if text then
+      if window:match("com.tencent.mobileqq") then
+         putclip(emoji_for_qq(text))
+      else
+         putclip(text)
+      end
+   end
    if window then print("window is " .. window) end
    if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" then
       weibo_text_share(window)
@@ -656,6 +754,12 @@ t1_post = function(text) -- use weixin
                ([[
                 adb-tap 560 1840 adb-tap-2 560 %d adb-tap 296 %d adb-tap 888 %d adb-tap 976 %d
             ]]):format(y_double_click, y_select_all, y_paste, y_send)
+            )
+         elseif using_xiaomi_os then
+            adb_event(
+               ([[
+                        adb-tap 560 1840 adb-long-press-800 560 %d adb-tap 310 %d adb-tap 501 %d adb-tap 976 %d
+               ]]):format(y_double_click, y_select_all, y_paste, y_send)
             )
          else
             debug("not using smartisan os")
@@ -745,7 +849,7 @@ picture_to_weibo_share = function(pics, ...)
       local target = pics[i]
 
       if i == 1 then
-         adb_shell("am start -n com.sina.weibo/com.sina.weibo.EditActivity; sleep .5")
+         adb_shell("am start -n com.sina.weibo/com.sina.weibo.EditActivity; sleep .5 || busybox sleep .5")
          local input_method, ime_height = adb_get_input_window_dump()
          if ime_height ~= 0 then
             adb_event("key back")
@@ -774,14 +878,18 @@ local function picture_to_weixin_chat(pics, ...)
        ime_height = 0
        adb_event("key back")
    end
-   local post_button = ('984 %d'):format(1920 - ime_height - 50)
+   local post_button = ('984 %d'):format(1920 - 50)
    for i = 1, #pics do
       local ext = last(pics[i]:gmatch("%.[^.]+"))
       local target = pics[i]
       if i == 1 then
-         local events = post_button .. " sleep .1 swipe 125 1285 500 1285 sleep .1 " ..
-            "125 1285 sleep 1"
-         adb_event(split(" ", events))
+         local events = post_button .. " sleep .1 " ..
+            "125 1285 sleep .1"
+         adb_event(events)
+         if adb_focused_window() ~= "com.tencent.mm/com.tencent.mm.plugin.gallery.ui.AlbumPreviewUI" then
+            adb_event("125 1285")
+         end
+         sleep(1)
       end
 
       local pic_share_buttons = {
@@ -897,6 +1005,8 @@ local function t1_picture(...)
    local window = adb_focused_window()
    if window == "com.tencent.mm/com.tencent.mm.ui.LauncherUI" then
       picture_to_weixin_chat(pics)
+   elseif window == "com.tencent.mm/com.tencent.mm.ui.chatting.ChattingUI" then
+      picture_to_weixin_chat(pics)
    elseif window == "com.tencent.qqlite/com.tencent.mobileqq.activity.ChatActivity" then
       picture_to_qqlite_chat(pics)
    elseif window == "com.tencent.mobileqq/com.tencent.mobileqq.activity.ChatActivity" then
@@ -921,7 +1031,7 @@ local function t1_follow_me()
    if init_width < 720 then
       adb_event("sleep 1 adb-tap 659 950 key back")
    else
-      adb_event("sleep 1 adb-tap 659 880 key back")
+      adb_event("sleep 1 adb-tap 659 870 key back")
    end
 end
 
@@ -955,34 +1065,64 @@ M.picture_to_weixin_share = picture_to_weixin_share_upload
 M.t1_spread_it = t1_spread_it
 M.adb_start_weixin_share = adb_start_weixin_share
 M.t1_config = t1_config
+M.emoji_for_qq = emoji_for_qq
 
-if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
-   -- t1_post(join(' ', arg))
-   t1_config()
-   if type(M[arg[1]]) == 'function' then
-      _G.M = M
-      cmd = "M[arg[1]]("
-      for i = 2, #arg do
-         if i ~= 2 then
-            cmd = cmd .. ', '
-         end
-
-         cmd = cmd .. "arg[" .. i .. "]"
+local function do_it()
+   if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
+      -- t1_post(join(' ', arg))
+      local file = io.open("setclip.apk.md5")
+      if file then
+         t1_config()
+         file:close()
       end
-      cmd = cmd .. ")"
-      debug("cmd is %s", cmd)
-      loadstring(cmd)()
+      if type(M[arg[1]]) == 'function' then
+         _G.M = M
+         cmd = "M[arg[1]]("
+         for i = 2, #arg do
+            if i ~= 2 then
+               cmd = cmd .. ', '
+            end
+
+            cmd = cmd .. "arg[" .. i .. "]"
+         end
+         cmd = cmd .. ")"
+         debug("cmd is %s", cmd)
+         loadstring(cmd)()
+      end
+      os.exit(0)
+      t1_picture(arg[1]) -- , arg[2], arg[3], arg[4], arg[5], arg[6], arg[7], arg[8], arg[9])
+      os.exit(0)
+      print(5)
+      debug_set_x = arg[#arg]
+      arg[#arg] = nil
+      -- adb_unquoter = arg[#arg]
+      -- arg[#arg] = nil
+      adb_shell(arg)
+      -- system{'the-true-adb', 'push', arg[1], "/sdcard/1.txt"}
+   else
+      return M
    end
-   os.exit(0)
-   t1_picture(arg[1]) -- , arg[2], arg[3], arg[4], arg[5], arg[6], arg[7], arg[8], arg[9])
-   os.exit(0)
-   print(5)
-   debug_set_x = arg[#arg]
-   arg[#arg] = nil
-   -- adb_unquoter = arg[#arg]
-   -- arg[#arg] = nil
-   adb_shell(arg)
-   -- system{'the-true-adb', 'push', arg[1], "/sdcard/1.txt"}
-else
-   return M
 end
+qq_emojis = {
+[[]], [[(]], [[]], [[+]], [[]], [[	]], [[]], [[j]],
+[[#]], [[ú]], [[]], [[]], [[]], [[ ]], [[!]], [[ ]],
+[[]], [[]], [[]] .. "\r", [[]], [[]], [[]], [[]], [[]],
+[[Q]], [[R]], [[]], [[]], [[%]], [[2]], [[*]], [[S]],
+[["]], [[]], [[1]], [[T]], [[']], [[N]], [[]], [[]],
+[[]], [[U]], [[V]], [[W]], [[.]], [[X]], [[,]],
+[[Y]], [[0]], [[]], [[Z]], [[)]], [[$]], [[[]], [[3]],
+[[]], [[<]], [[=]], [[\]], [=[]]=], [[B]], [[:]], [[]],
+[[]], [[9]], [[]], [[]], [[J]], [[;]], [[P]], [[]],
+[[F]], [[M]], [[>]], [[]], [[D]], [[K]], [[L]], [[-]],
+[[4]], [[5]], [[6]], [[7]], [[8]], [[?]], [[I]], [[H]],
+[[A]], [[^]], [[@]], [[&]], [[/]], [[_]], [[G]], [[`]],
+[[a]], [[b]], [[c]], [[d]], [[O]], [[e]], [[f]], [[g]],
+[[h]], [[i]], [[l]], [[m]], [[n]], [[o]], [[p]], [[q]],
+[[r]], [[s]], [[t]], [[u]], [[v]], [[w]], [[x]], [[y]], [[z]]
+}
+
+return do_it()
+
+-- Local variables:
+-- coding: utf-8
+-- End:
