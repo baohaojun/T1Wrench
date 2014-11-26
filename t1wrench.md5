@@ -1,5 +1,4 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt 4cbc557e5345ca08ef897b2f2336340c
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt f8c85928a8d7c82261cc519ec17f4118
-.start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash 8437d3b1a5a67cd7ad378b1ab08de6bd
-update-md5s.sh https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/update-md5s.sh 90a1b62ec4484092819f0115ded166ed
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 1b2750a1b3eb8a3b9d34a07c15fe8a16
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt 4cf579b47eca610e4a4e53f3d57d2442
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 474cb9c41ffb0be5861cc3db159423ec
+.start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash a3ef1bb4164543601110547a64ec28a6
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 e155a3be364642fa3fd797fbb5a13302
