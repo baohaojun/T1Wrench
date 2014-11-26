@@ -41,4 +41,4 @@ git diff --name-status "$start" |
         echo $x $url $md5;
     done | grep -v -P '^(./|)t1wrench.md5 ' | tee t1wrench.md5
 my_md5=$(md5sum t1wrench.md5 | pn 1)
-echo myself $(git-info-clip t1wrench.md5) $my_md5 >> t1wrench.md5
+echo myself $(git-info-clip t1wrench.md5) $my_md5 |tee -a t1wrench.md5
