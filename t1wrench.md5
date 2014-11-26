@@ -1,6 +1,0 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.bin-version.txt f4be76eef31189a89e7220ba6312e925
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.src-version.txt dc580939c28b97fcb9880136580c82aa
-.start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.start-upgrade.hash efd346ad6e6b16d5d19aca1d05071a0b
-T1Wrench.exe https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/T1Wrench.exe 7730e406d99de3b0fbdf74d419931bdc
-update-md5s.sh https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/update-md5s.sh 90a1b62ec4484092819f0115ded166ed
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/t1wrench.md5 65b88acaba8393aefdd800b3a8a7634f
