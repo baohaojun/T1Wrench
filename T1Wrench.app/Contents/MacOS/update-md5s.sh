@@ -16,18 +16,20 @@ if test -e lua52.dll; then
     git co HEAD lua52.dll lua.exe luac.exe md5/des56.dll md5/core.dll
 fi
 
-git add $(relative-path $(dirname $(lookup-file -e .git)))
-git commit -m "${ReleaseVersion:-auto commit from update-md5s.sh}"
+gitdir=$(relative-path $(dirname $(lookup-file -e .git)) .)
+git add $gitdir
+git commit -m "${ReleaseVersion:-auto commit from update-md5s.sh}" --allow-empty
 srcVersion=$(cd ~/src/github/T1Wrench; git log -1 --pretty=%H)
 echo $srcVersion > .src-version.txt
 git log -1 --pretty=%H > .bin-version.txt
+git add $gitdir
 git commit -m 'bump version'
 
-gitdir=$(relative-path $(dirname $(lookup-file -e .git)))
+
 
 git diff --name-status "$start" |
     while read type x; do
-        x=$(relative-path $gitdir/$x)
+        x=$(relative-path $gitdir/$x .)
         if test ! -e $x; then
             if test "$type" != D; then
                 die "Don't know how to update $type $x"
