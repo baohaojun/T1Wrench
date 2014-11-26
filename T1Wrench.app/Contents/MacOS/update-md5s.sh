@@ -39,6 +39,6 @@ git diff --name-status "$start" |
         md5=$(md5sum $x|pn 1);
         url=$(git-info-clip $x);
         echo $x $url $md5;
-    done | grep -v -P '^\./t1wrench.md5 ' | tee t1wrench.md5
+    done | grep -v -P '^(./|)t1wrench.md5 ' | tee t1wrench.md5
 my_md5=$(md5sum t1wrench.md5 | pn 1)
 echo myself $(git-info-clip t1wrench.md5) $my_md5 >> t1wrench.md5
