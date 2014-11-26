@@ -27,8 +27,13 @@ for line in md5file:lines() do
    md5s_here[file] = md5
    urls_here[file] = url
 end
+md5file:close()
 
-print("hello world: " .. urls_here.myself)
+local mv, rm = "mv", "rm"
+if urls_here.myself:match("-windows/") then
+   mv, rm = "move", "del"
+end
+
 
 local _s = system{"./download", urls_here.myself, "t1wrench.md5.up"}
 
@@ -64,8 +69,6 @@ for file, md5 in pairs(md5s_remote) do
    end
 
    if true then
-      print("Working on " .. file)
-
       local stream = io.open(file, "rb")
       if stream then
          local data = stream:read("*a")
@@ -98,15 +101,12 @@ for file, md5 in pairs(md5s_remote) do
 
       stream:write(data)
       stream:close()
-      system{"rm", file .. ".up"}
+      system{rm, file .. ".up"}
    end
    ::continue::
 end
 
-local mv = "mv"
-if urls_here.myself:match("-windows/") then
-   mv = "move"
-end
+system{rm, "t1wrench.md5"}
 system{mv, "t1wrench.md5.up", "t1wrench.md5"}
 print("Update OK!, press Enter to exit... ")
 io.stdin:read("*l")
