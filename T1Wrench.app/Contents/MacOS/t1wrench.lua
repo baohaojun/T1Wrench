@@ -6,7 +6,8 @@ local picture_to_weixin_share, picture_to_weibo_share
 local adb_get_input_window_dump, adb_top_window
 local adb_start_weixin_share
 local t1_config, check_phone
-local emoji_for_qq, debug
+local emoji_for_qq, debug, get_a_note
+local adb_get_last_pic
 -- variables
 local using_scroll_lock = true
 local using_adb_root
@@ -24,6 +25,7 @@ local brand = "smartisan"
 local model = "T1"
 local qq_emojis
 local sdk_version = 19
+local emojis, emojis_map
 
 
 
@@ -90,7 +92,7 @@ end
 
 local function system(cmds)
    if type(cmds) == 'string' then
-      os.execute(cmds)
+      return os.execute(cmds)
    elseif type(cmds) == 'table' then
       command_str = ''
       for i = 1, #cmds do
@@ -100,7 +102,7 @@ local function system(cmds)
             command_str = command_str .. shell_quote(cmds[i]) .. ' '
          end
       end
-      os.execute(debug_set_x .. command_str)
+      return os.execute(debug_set_x .. command_str)
    end
 end
 
@@ -108,7 +110,7 @@ debug = function(fmt, ...)
    print(string.format(fmt, ...))
 end
 
-local function split(pat, str)
+local function split(pat, str, allow_null)
    local start = 1
    if pat == ' ' then
       pat = "%s+"
@@ -120,9 +122,13 @@ local function split(pat, str)
       if (i and i >= start) then
          if i > start then
             list[#list + 1] = str:sub(start, i - 1)
+         elseif allow_null then
+            list[#list + 1] = ""
          end
       elseif #str >= start then
          list[#list + 1] = str:sub(start)
+      elseif allow_null then
+         list[#list + 1] = ""
       end
       if i then
          start = j + 1
@@ -131,6 +137,34 @@ local function split(pat, str)
       end
    end
    return list
+end
+
+local function replace_img_with_emoji(text, html)
+   debug("text is %s, html is %s", text, html)
+   local texts = split("￼", text, true)
+   for k, v in pairs(texts) do
+      print(k, v)
+   end
+   local n = 2
+   local res = texts[1]
+   for emoji in html:gmatch('img src="(.-)"') do
+      debug("emoji is %s", emoji)
+      if not emojis then
+         emojis = require"emojis"
+         emojis_map = {}
+         for k, v in ipairs(emojis) do
+            emojis_map[v[3]] = v[1]
+         end
+      end
+      emoji = emojis_map[emoji] or "[unknown emoji]"
+      res = res .. emoji
+      if texts[n] then
+         res = res .. texts[n]
+      end
+      n = n + 1
+   end
+   debug("res is %s", res)
+   return res
 end
 
 local function join(mid, args)
@@ -171,7 +205,12 @@ local function adb_shell(cmds)
 end
 
 local function adb_pipe(cmds)
-   return adb_do(io.popen, cmds):read('*a'):gsub("\r", "")
+   local pipe = adb_do(io.popen, cmds)
+   if pipe then
+      return pipe:read('*a'):gsub("\r", "")
+   else
+      return ""
+   end
 end
 
 local function adb_focused_window()
@@ -284,7 +323,7 @@ local function adb_tap_mid_bot()
 end
 
 local function sleep(time)
-   adb_shell(("sleep %s || busybox sleep %s"):format(time, time))
+   adb_event(("sleep %s"):format(time))
 end
 
 local function weibo_text_share(window)
@@ -296,6 +335,10 @@ local function weibo_text_share(window)
          adb_tap_mid_bot()
       end
       sleep(.5)
+   end
+   local input_method, ime_height = adb_get_input_window_dump()
+   if ime_height ~= 0 then
+      adb_event("key back")
    end
    if using_scroll_lock then
       adb_event{'key', 'scroll_lock', 991, 166}
@@ -486,7 +529,7 @@ local function t1_mail(window)
    if window == 'com.google.android.gm/com.google.android.gm.ComposeActivityGmail' then
       adb_event{806, 178}
    else
-      adb_event{998, 174}
+      adb_event("sleep .1 adb-tap 998 174")
    end
 end
 
@@ -670,6 +713,71 @@ t1_config = function()
    end
 end
 
+get_a_note = function(text)
+   if text then
+      putclip(text)
+   end
+   adb_shell("am start -n com.smartisanos.notes/com.smartisanos.notes.NotesActivity")
+   adb_event(
+      [[
+            sleep .1
+            adb-tap-2 71 162
+            adb-tap 941 163
+   ]])
+   if using_scroll_lock then
+      adb_event("sleep .2 key scroll_lock sleep .2")
+   else
+      adb_event(
+         [[
+                adb-long-press-800 226 440
+                adb-tap 106 258
+         ]])
+      end
+   adb_event(
+      [[
+            adb-tap 934 155
+            adb-tap 984 149
+            adb-tap 409 1256
+            adb-tap 906 207
+   ]])
+   for i = 1, 10 do
+      local window = adb_focused_window()
+      if window == 'com.smartisanos.notes/com.smartisanos.notes.LongLengthWeiboActivity' then
+         sleep(.1 * i)
+      end
+   end
+   adb_event(
+      [[
+            adb-tap-2 71 162
+            adb-swipe-200 100 561 332 561
+            adb-tap 192 510
+            adb-key BACK
+   ]])
+   adb_get_last_pic('notes', true)
+end
+
+adb_get_last_pic = function(which, remove)
+   if which == 'notes' then
+      local dir = '/sdcard/smartisan/Notes'
+      local ls_out1 = adb_pipe("busybox ls -t -1 " .. dir)
+      ls_out1 = ls_out1:gsub("\n.*", "")
+      ls_out1 = ls_out1:gsub("\x1b.-m", "")
+      ls_out1 = ls_out1:gsub("%?+", "*")
+
+      if ls_out1:match('%*') then
+         ls_out1 = adb_pipe(('bash -c "ls %s/%s"'):format(dir, ls_out1))
+         ls_out1 = ls_out1:gsub("\n", "")
+         ls_out1 = ls_out1:gsub(".*/", "")
+      end
+
+      system{"adb", "pull", ("%s/%s"):format(dir, ls_out1), ("last-pic-%s.png"):format(which)}
+      if remove then
+         system{"adb", "shell", "rm", ("%s/%s"):format(dir, ls_out1)}
+         adb_shell(("am startservice --user 0 -n com.bhj.setclip/.PutClipService --es picture %s/%s"):format(dir, ls_out1))
+      end
+   end
+end
+
 t1_post = function(text) -- use weixin
    local window = adb_focused_window()
    if text then
@@ -823,7 +931,7 @@ picture_to_weixin_share = function(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 901 1841 adb-tap 75 1867 adb-tap 903 133")
    return "Prompt: please say something"
@@ -863,7 +971,7 @@ picture_to_weibo_share = function(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 141 1849 adb-tap 922 1891")
 end
@@ -883,8 +991,11 @@ local function picture_to_weixin_chat(pics, ...)
       local ext = last(pics[i]:gmatch("%.[^.]+"))
       local target = pics[i]
       if i == 1 then
-         local events = post_button .. " sleep .1 " ..
-            "125 1285 sleep .1"
+         local events = post_button .. [[
+             sleep .1
+             adb-tap 125 1285
+             sleep .1
+         ]]
          adb_event(events)
          if adb_focused_window() ~= "com.tencent.mm/com.tencent.mm.plugin.gallery.ui.AlbumPreviewUI" then
             adb_event("125 1285")
@@ -898,7 +1009,7 @@ local function picture_to_weixin_chat(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 944 1894 adb-tap 59 1871 adb-tap 927 148")
 end
@@ -919,7 +1030,7 @@ local function picture_to_qq_chat(pics, ...)
       local target = pics[i]
       if i == 1 then
          local events = post_button .. " sleep .1 adb-tap 203 1430 sleep .1"
-         adb_event(split(" ", events))
+         adb_event(events)
          while adb_focused_window() ~= "com.tencent.mobileqq/com.tencent.mobileqq.activity.photo.AlbumListActivity" do
             adb_event{118, 152, "sleep", .5}
          end
@@ -932,7 +1043,7 @@ local function picture_to_qq_chat(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 608 1831 adb-tap 403 1679 adb-tap 918 1862 sleep .5 adb-tap 312 1275")
 end
@@ -953,7 +1064,7 @@ local function picture_to_qqlite_chat(pics, ...)
       local target = pics[i]
       if i == 1 then
          local events = post_button .. " sleep .1 adb-tap 203 1430 sleep .1"
-         adb_event(split(" ", events))
+         adb_event(events)
          while adb_focused_window() ~= "com.tencent.qqlite/com.tencent.mobileqq.activity.photo.AlbumListActivity" do
             adb_event{118, 152, "sleep", .5}
          end
@@ -966,7 +1077,7 @@ local function picture_to_qqlite_chat(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 519 1841 adb-tap 434 1071 adb-tap 918 1862 sleep .5 adb-tap 279 1221")
 end
@@ -987,7 +1098,7 @@ local function picture_to_weibo_chat(pics, ...)
       local target = pics[i]
       if i == 1 then
          local events = post_button .. " sleep .1 adb-tap 375 1410 sleep .1 adb-tap 645 135 sleep .2 adb-tap 369 679 sleep 2"
-         adb_event(split(" ", events))
+         adb_event(events)
       end
       local pic_share_buttons = {
          "adb-tap 614 281", "adb-tap 1000 260", "adb-tap 268 629",
@@ -995,7 +1106,7 @@ local function picture_to_weibo_chat(pics, ...)
          "adb-tap 612 996", "adb-tap 1006 992", "adb-tap 265 1346",
       }
       local i_button = pic_share_buttons[i]
-      adb_event(split(" ", i_button))
+      adb_event(i_button)
    end
    adb_event("adb-tap 943 1868 adb-tap 194 1163")
 end
@@ -1066,6 +1177,12 @@ M.t1_spread_it = t1_spread_it
 M.adb_start_weixin_share = adb_start_weixin_share
 M.t1_config = t1_config
 M.emoji_for_qq = emoji_for_qq
+M.split = split
+M.replace_img_with_emoji = replace_img_with_emoji
+M.system = system
+M.debug = debug
+M.get_a_note = get_a_note
+M.adb_get_last_pic = adb_get_last_pic
 
 local function do_it()
    if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
