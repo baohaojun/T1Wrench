@@ -42,3 +42,5 @@ git diff --name-status "$start" |
     done | grep -v -P '^(./|)t1wrench.md5 ' | tee t1wrench.md5
 my_md5=$(md5sum t1wrench.md5 | pn 1)
 echo myself $(git-info-clip t1wrench.md5) $my_md5 |tee -a t1wrench.md5
+git add $gitdir
+git commit -m 'bump version' --amend
