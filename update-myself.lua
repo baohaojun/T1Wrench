@@ -1,6 +1,10 @@
 #!/usr/bin/lua
 
 local my_error = error
+local download = "./download"
+if package.config:sub(1,1) == "\\" then
+   download = ".\\download"
+end
 error = function(msg, level)
    print(msg)
    print("Update failed! Press Enter to exit... ")
@@ -35,7 +39,7 @@ if urls_here.myself:match("-windows/") then
 end
 
 
-local _s = system{"./download", urls_here.myself, "t1wrench.md5.up"}
+local _s = system{download, urls_here.myself, "t1wrench.md5.up"}
 
 local md5s_remote = {}
 local urls_remote = {}
@@ -79,7 +83,7 @@ for file, md5 in pairs(md5s_remote) do
          end
       end
 
-      system{"./download", urls_remote[file], file .. ".up"}
+      system{download, urls_remote[file], file .. ".up"}
 
       local stream_up = io.open(file .. ".up", "rb")
       if not stream_up then
