@@ -1,0 +1,8 @@
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.bin-version.txt 387a03faaa6a8bf5629b00b1488c3b30
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.src-version.txt 3f6974c3a879496f5d322357029c137a
+.start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/.start-upgrade.hash 853a6fa19cc3a4910cd13482c028652e
+T1Wrench.exe https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/T1Wrench.exe da94446a780421d090b73e9dce43e2f7
+config-adb.bat https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/config-adb.bat 97e22854f3bf642ab45ecbee2160df89
+t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/t1wrench.lua ce454bc1d761d43ce98a7a4903a09b93
+update-myself.bat https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/update-myself.bat 5d7ca6f42ab54be3af3626ce986b9bb7
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-windows/t1wrench.md5 ed7b254c1e9ecfe7e6ad79b033cfd202
