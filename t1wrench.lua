@@ -9,7 +9,7 @@ local t1_config, check_phone
 local emoji_for_qq, debug, get_a_note
 local adb_get_last_pic
 -- variables
-local using_scroll_lock = true
+local using_scroll_lock = false
 local using_adb_root
 local adb_unquoter
 local is_windows = false
@@ -21,11 +21,13 @@ local app_width, app_height = 1080,1920
 local width_ratio, height_ratio = app_width / default_width,  app_height / default_height
 local using_smartisan_os = true
 local using_xiaomi_os = false
+local using_oppo_os = false
 local brand = "smartisan"
 local model = "T1"
 local qq_emojis
 local sdk_version = 19
 local emojis, emojis_map
+local the_true_adb = "./the-true-adb"
 
 local qq_emoji_table = {
    "微笑", "撇嘴", "色", "发呆", "得意", "流泪", "害羞", "闭嘴", "睡", "大哭",
@@ -61,6 +63,7 @@ else -- windows
    debug_set_x = ""
    adb_unquoter = '\\"'
    is_windows = true
+   the_true_adb = ".\\the-true-adb"
 end
 
 
@@ -194,7 +197,7 @@ local function adb_do(func, cmds)
          end
          command_str = command_str .. quoted_cmds[i] .. ' '
       end
-      return func(debug_set_x .. "the-true-adb shell " .. command_str)
+      return func(debug_set_x .. the_true_adb .. " shell " .. command_str)
    end
 end
 
@@ -347,6 +350,8 @@ local function weibo_text_share(window)
       adb_event("adb-tap 24 308 adb-key SPACE adb-long-press-800 17 294 adb-tap 545 191 adb-tap 991 166")
    elseif using_xiaomi_os then
       adb_event("adb-tap-2 24 308 sleep .1 adb-tap 77 179 adb-tap 991 166")
+   elseif using_oppo_os then
+      adb_event("adb-long-press-800 34 312 adb-tap 72 149 adb-tap 991 166")
    else
       adb_event("adb-key space adb-long-press-800 17 294 adb-tap-2 991 166")
    end
@@ -373,7 +378,7 @@ end
 adb_start_weixin_share = function(text_or_image)
    if using_adb_root then
       if text_or_image == 'text' then
-         adb_shell{"am", "start", "-n", "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsCommentUI", "--ei", "sns_comment_type", "1"}
+         adb_shell("am start -n com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsCommentUI --ei sns_comment_type 1")
       elseif text_or_image == 'image' then
          adb_shell("am start -n com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsUploadUI")
       else
@@ -431,6 +436,8 @@ local function weixin_text_share(window, text)
       ]])
    elseif using_xiaomi_os then
       adb_event("adb-long-press-800 422 270 adb-tap 147 213 adb-tap 1007 134")
+   elseif using_oppo_os then
+      adb_event("adb-tap 87 312 adb-tap 92 156 adb-tap 947 132")
    else
       adb_event("adb-key space adb-long-press-800 111 369 adb-tap 97 265 adb-tap 991 166")
    end
@@ -622,7 +629,7 @@ putclip = function(text)
    file:write(text)
    file:close()
    check_phone()
-   system{'the-true-adb', 'push', path, '/sdcard/putclip.txt'}
+   system{the_true_adb, 'push', path, '/sdcard/putclip.txt'}
    adb_shell(
       [[
                am startservice --user 0 -n com.bhj.setclip/.PutClipService&
@@ -639,7 +646,7 @@ end
 
 t1_config = function()
    -- install the apk
-   system("adb devices")
+   system(the_true_adb .. " devices")
    local uname = adb_pipe("uname || busybox uname")
    if not uname:match("Linux") then
       local home = os.getenv("HOME")
@@ -675,7 +682,7 @@ t1_config = function()
          end
          ini_file:write("0x29a9\n")
          ini_file:close()
-         system{"the-true-adb", "kill-server"}
+         system{the_true_adb, "kill-server"}
          error("Done config for your adb devices, please try again")
       else
          error("No phone found, can't set up, uname is: " .. uname)
@@ -687,9 +694,9 @@ t1_config = function()
    io.close(md5file)
    debug("on phone: %s, local: %s", setclip_phone_md5, setclip_local_md5)
    if setclip_phone_md5 ~= setclip_local_md5 then
-      local install_output = io.popen("adb install -r SetClip.apk"):read("*a")
+      local install_output = io.popen(the_true_adb .. " install -r SetClip.apk"):read("*a")
       if install_output:match("\nSuccess\r?\n") then
-         system("adb push setclip.apk.md5 /sdcard/t1wrench-setclip.md5")
+         system(the_true_adb .. " push setclip.apk.md5 /sdcard/t1wrench-setclip.md5")
          local setclip_phone_md5 = adb_pipe("cat /sdcard/t1wrench-setclip.md5")
          local md5file = io.open("setclip.apk.md5")
          local setclip_local_md5 = md5file:read("*a")
@@ -730,8 +737,8 @@ t1_config = function()
 
    if brand:match("Xiaomi") then
       using_xiaomi_os = true
-   else
-      using_xiaomi_os = false
+   elseif brand:match("OPPO") then
+      using_oppo_os = true
    end
 
    local id = adb_pipe("id")
@@ -749,6 +756,7 @@ t1_config = function()
       using_scroll_lock = false
       debug("pastetool is false")
    end
+   return "brand is " .. brand
 end
 
 get_a_note = function(text)
@@ -808,9 +816,9 @@ adb_get_last_pic = function(which, remove)
          ls_out1 = ls_out1:gsub(".*/", "")
       end
 
-      system{"adb", "pull", ("%s/%s"):format(dir, ls_out1), ("last-pic-%s.png"):format(which)}
+      system{the_true_adb, "pull", ("%s/%s"):format(dir, ls_out1), ("last-pic-%s.png"):format(which)}
       if remove then
-         system{"adb", "shell", "rm", ("%s/%s"):format(dir, ls_out1)}
+         system{the_true_adb, "shell", "rm", ("%s/%s"):format(dir, ls_out1)}
          adb_shell(("am startservice --user 0 -n com.bhj.setclip/.PutClipService --es picture %s/%s"):format(dir, ls_out1))
       end
    end
@@ -908,6 +916,12 @@ t1_post = function(text) -- use weixin
                         adb-tap 560 1840 adb-long-press-800 560 %d adb-tap 310 %d adb-tap 501 %d adb-tap 976 %d
                ]]):format(y_double_click, y_select_all, y_paste, y_send)
             )
+         elseif using_oppo_os then
+            adb_event(
+               ([[
+                        adb-tap 560 1840 adb-long-press-800 560 %d adb-tap 263 %d sleep .1 adb-tap 452 %d adb-tap 976 %d
+               ]]):format(y_double_click, y_select_all, y_paste, y_send)
+            )
          else
             debug("not using smartisan os")
             adb_event(
@@ -940,7 +954,7 @@ local function upload_pics(...)
       local ext = last(pics[i]:gmatch("%.[^.]+"))
       local target = ('/sdcard/DCIM/Camera/t1wrench-%d-%d%s'):format(time, i, ext)
       targets[#targets + 1] = target
-      system{'the-true-adb', 'push', pics[i], target}
+      system{the_true_adb, 'push', pics[i], target}
       adb_shell{"am", "startservice", "--user", "0", "-n", "com.bhj.setclip/.PutClipService", "--es", "picture", target}
    end
    return targets
@@ -1252,10 +1266,7 @@ local function do_it()
       print(5)
       debug_set_x = arg[#arg]
       arg[#arg] = nil
-      -- adb_unquoter = arg[#arg]
-      -- arg[#arg] = nil
       adb_shell(arg)
-      -- system{'the-true-adb', 'push', arg[1], "/sdcard/1.txt"}
    else
       return M
    end
