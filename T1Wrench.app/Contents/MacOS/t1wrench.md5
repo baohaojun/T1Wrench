@@ -1,6 +1,10 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.bin-version.txt 3fbee35afd7354dfcfc841c591e4956f
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.src-version.txt 3f6974c3a879496f5d322357029c137a
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.bin-version.txt 2bab32a4bf9ffe996a9e097dd50998d0
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.src-version.txt f2a93b29cc58544ab0f2a560b196279f
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.start-upgrade.hash 8ff6d560db02e5fb361413fa839cdd34
 T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/T1Wrench 3a279cae4cab4826121204a7a790eaee
-t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.lua ce454bc1d761d43ce98a7a4903a09b93
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.md5 28e8004f45659e9c7f65ded580099c17
+lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/lua d6244f0a352cf7596177c285d6afa0be
+luac https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/luac f218cbf5ce36736d35b300c468ea046a
+md5/core.so https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/md5/core.so 75c7e995a9b2dc5a6149c7203aac6819
+md5/des56.so https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/md5/des56.so a1eaab26875eb83f8018ef2e8897e0b6
+t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.lua 4a5264bebc9ada30990e2879bdbd30e9
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.md5 c80027b981424f9937e060b2c7d02e27
