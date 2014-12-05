@@ -1,8 +1,8 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt dd90e3a2d2b57eb3282cdc773c3051ef
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 3f6974c3a879496f5d322357029c137a
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt c0cee0b5f413862b8e5d031ff58109c5
+.gitignore https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.gitignore f4ce59f2c67e3a1f36bf3078d52ac00a
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt f2a93b29cc58544ab0f2a560b196279f
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash 2cbe4fcad44cebd511a67b3508bfefe0
 T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/T1Wrench 03f296a41b4c21f6c5d09207cd03854f
 adb https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/adb 326e8abee168c19ce13d724b21c0687d
-last-pic-notes.png https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/last-pic-notes.png a7c332442d618c6cec5830d8167ed0c8
-t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.lua ce454bc1d761d43ce98a7a4903a09b93
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 b303329fb391c6a9c73fe8d1de8c6576
+t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.lua 4a5264bebc9ada30990e2879bdbd30e9
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 8d436e63ded051e01c48eaaa6bf947fe
