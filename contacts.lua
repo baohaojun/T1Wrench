@@ -17,25 +17,14 @@ check_last_field = function (contact, field)
 end
 
 fix_contact = function (contact)
-   contact.TELS = {}
-   contact.EMAILS = {}
-   contact.FNWrench = ""
+
    for field, value in pairs(contact) do
       if field == "TELS" or field == "EMAILS"  or field == "FNWrench" then
          goto continue
       end
       check_last_field(contact, field)
       if (field:match("^FN;?")) then
-         print("name is " .. contact[field])
          contact.FNWrench = contact[field]
-      end
-      if (field:match("^TEL;?")) then
-         print("got a tel: " .. contact[field])
-         contact.TELS[#contact.TELS + 1] = (contact[field]):gsub("%-", "")
-      end
-
-      if (field:match("^EMAIL;?")) then
-         contact.EMAILS[#contact.EMAILS + 1] = (contact[field]):gsub("%-", "")
       end
       ::continue::
    end
@@ -49,12 +38,19 @@ read_vcf = function (vcf_path)
    end
 
    local contact = {}
+   contact.TELS = {}
+   contact.EMAILS = {}
+   contact.FNWrench = ""
+
    local last_field = ""
    local collecting_photo = false
    for line in vcf_file:lines() do
       if line:match("^END:VCARD") then
          contacts[#contacts + 1] = contact
          contact = {}
+         contact.TELS = {}
+         contact.EMAILS = {}
+         contact.FNWrench = ""
       elseif line:match("^PHOTO;") then
          collecting_photo = true;
          if not line:match("^PHOTO;ENCODING=BASE64;") then
@@ -82,8 +78,15 @@ read_vcf = function (vcf_path)
             field = line:gsub(":.*", "")
             data = line:gsub(".*:", "")
             contact[field] = data
-            print("set " .. field)
             last_field = field
+
+            if (field:match("^TEL;?")) then
+               contact.TELS[#contact.TELS + 1] = (contact[field]):gsub("%-", "")
+            end
+
+            if (field:match("^EMAIL;?")) then
+               contact.EMAILS[#contact.EMAILS + 1] = (contact[field]):gsub("%-", "")
+            end
          else
             contact[last_field] = contact[last_field] .. line
          end
@@ -92,7 +95,6 @@ read_vcf = function (vcf_path)
    for i = 1, #contacts do
       fix_contact(contacts[i])
    end
-   print("got " .. #contacts .. " contacts")
    return contacts
 end
 
