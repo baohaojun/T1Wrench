@@ -1,15 +1,19 @@
 #!/usr/bin/lua
 
 -- functions
+local t1_call
 local shell_quote, putclip, t1_post
+local adb_start_activity
 local picture_to_weixin_share, picture_to_weibo_share
+local picture_to_momo_share
 local adb_get_input_window_dump, adb_top_window
-local adb_start_weixin_share
+local adb_start_weixin_share, adb_is_window
+local adb_focused_window
 local t1_config, check_phone
-local emoji_for_qq, debug, get_a_note
+local emoji_for_qq, debug, get_a_note, emoji_for_weixin, emoji_for_qq_or_weixin
 local adb_get_last_pic
 -- variables
-local using_scroll_lock = false
+local using_scroll_lock = true
 local using_adb_root
 local adb_unquoter
 local is_windows = false
@@ -24,23 +28,26 @@ local using_xiaomi_os = false
 local using_oppo_os = false
 local brand = "smartisan"
 local model = "T1"
-local qq_emojis
+local qq_emojis, weixin_emojis
 local sdk_version = 19
 local emojis, emojis_map
 local the_true_adb = "./the-true-adb"
 
 local qq_emoji_table = {
-   "微笑", "撇嘴", "色", "发呆", "得意", "流泪", "害羞", "闭嘴", "睡", "大哭",
-   "尴尬", "发怒", "调皮", "呲牙", "惊讶", "难过", "酷", "冷汗", "抓狂", "吐",
-   "偷笑", "可爱", "白眼", "傲慢", "饥饿", "困", "惊恐", "流汗", "憨笑", "大兵",
-   "奋斗", "咒骂", "疑问", "嘘", "晕", "折磨", "衰", "骷髅", "敲打", "再见",
-   "擦汗", "抠鼻", "鼓掌", "糗大了", "坏笑", "左哼哼", "右哼哼", "哈欠", "鄙视",
-   "委屈", "快哭了", "阴险", "亲亲", "吓", "可怜", "菜刀", "西瓜", "啤酒",
-   "篮球", "乒乓", "咖啡", "饭", "猪头", "玫瑰", "凋谢", "示爱", "爱心", "心碎",
-   "蛋糕", "闪电", "炸弹", "刀", "足球", "瓢虫", "便便", "月亮", "太阳", "礼物",
-   "拥抱", "强", "弱", "握手", "胜利", "抱拳", "勾引", "拳头", "差劲", "爱你",
-   "NO", "OK", "爱情", "飞吻", "跳跳", "发抖", "怄火", "转圈", "磕头", "回头",
-   "跳绳", "挥手", "激动", "街舞", "献吻", "左太极", "右太极",
+   "微笑", "撇嘴", "色", "发呆", "得意", "流泪", "害羞", "闭嘴",
+   "睡", "大哭", "尴尬", "发怒", "调皮", "呲牙", "惊讶", "难过",
+   "酷", "冷汗", "抓狂", "吐", "偷笑", "可爱", "白眼", "傲慢",
+   "饥饿", "困", "惊恐", "流汗", "憨笑", "大兵", "奋斗", "咒骂",
+   "疑问", "嘘", "晕", "折磨", "衰", "骷髅", "敲打", "再见",
+   "擦汗", "抠鼻", "鼓掌", "糗大了", "坏笑", "左哼哼", "右哼哼", "哈欠",
+   "鄙视", "委屈", "快哭了", "阴险", "亲亲", "吓", "可怜", "菜刀",
+   "西瓜", "啤酒", "篮球", "乒乓", "咖啡", "饭", "猪头", "玫瑰",
+   "凋谢", "示爱", "爱心", "心碎", "蛋糕", "闪电", "炸弹", "刀",
+   "足球", "瓢虫", "便便", "月亮", "太阳", "礼物", "拥抱", "强",
+   "弱", "握手", "胜利", "抱拳", "勾引", "拳头", "差劲", "爱你",
+   "NO", "OK", "爱情", "飞吻", "跳跳", "发抖", "怄火", "转圈",
+   "磕头", "回头", "跳绳", "挥手", "激动", "街舞", "献吻", "左太极",
+   "右太极",
 }
 
 for i in ipairs(qq_emoji_table) do
@@ -68,6 +75,10 @@ end
 
 
 emoji_for_qq = function(text)
+   return emoji_for_qq_or_weixin(text, qq_emojis)
+end
+
+emoji_for_qq_or_weixin = function(text, which_emojis)
    local s = 1
    local replace = ""
    repeat
@@ -76,8 +87,12 @@ emoji_for_qq = function(text)
          local emoji = text:sub(fs + 1, fe - 1)
          if qq_emoji_table[emoji] then
             replace = replace .. text:sub(s, fs - 1)
-            local idx = qq_emoji_table[emoji]
-            replace = replace .. qq_emojis[idx]
+            if which_emojis == qq_emojis then
+               local idx = qq_emoji_table[emoji]
+               replace = replace .. which_emojis[idx]
+            else
+               replace = replace .. "/" .. emoji
+            end
             s = fe + 1
          else
             replace = replace .. text:sub(s, fs)
@@ -89,6 +104,10 @@ emoji_for_qq = function(text)
       end
    until s > #text
    return replace
+end
+
+emoji_for_weixin = function(text)
+   return emoji_for_qq_or_weixin(text, weixin_emojis)
 end
 
 local function system(cmds)
@@ -217,7 +236,15 @@ local function adb_pipe(cmds)
    return out:gsub("\r", "")
 end
 
-local function adb_focused_window()
+adb_is_window = function (w)
+   return w == adb_focused_window()
+end
+
+adb_start_activity = function(a)
+   adb_shell("am start -n " .. a)
+end
+
+adb_focused_window = function()
    local wdump = adb_pipe{"dumpsys", "window"}
    local match = string.match(wdump, "mFocusedWindow[^}]*%s(%S+)}")
    if match then
@@ -705,7 +732,9 @@ t1_config = function()
             error("Can't mark the setclip.apk as been installed")
          end
       else
-         error("Install setclip.apk failed, output is " .. install_output)
+         if not os.execute("test -e .quiet-apk-install-failure") then
+            error("Install setclip.apk failed, output is " .. install_output)
+         end
       end
    end
 
@@ -756,7 +785,7 @@ t1_config = function()
       using_scroll_lock = false
       debug("pastetool is false")
    end
-   return "brand is " .. brand
+   return ("brand is %s, paste is %s"):format(brand, using_scroll_lock)
 end
 
 get_a_note = function(text)
@@ -771,7 +800,7 @@ get_a_note = function(text)
             adb-tap 941 163
    ]])
    if using_scroll_lock then
-      adb_event("sleep .2 key scroll_lock sleep .2")
+      adb_event("sleep .5 key scroll_lock sleep .4")
    else
       adb_event(
          [[
@@ -795,8 +824,6 @@ get_a_note = function(text)
    adb_event(
       [[
             adb-tap-2 71 162
-            adb-swipe-200 100 561 332 561
-            adb-tap 192 510
             adb-key BACK
    ]])
    adb_get_last_pic('notes', true)
@@ -829,12 +856,14 @@ t1_post = function(text) -- use weixin
    if text then
       if window:match("com.tencent.mobileqq") then
          putclip(emoji_for_qq(text))
+      elseif window:match("com.tencent.mm/") then
+         putclip(emoji_for_weixin(text))
       else
          putclip(text)
       end
    end
    if window then print("window is " .. window) end
-   if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" then
+   if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" or window == "com.immomo.momo/com.immomo.momo.android.activity.feed.PublishFeedActivity" then
       weibo_text_share(window)
       return
    elseif window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsUploadUI" or window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsCommentUI" then
@@ -872,7 +901,7 @@ t1_post = function(text) -- use weixin
       if input_method then
          if ime_height ~= 0 then
             add = ''
-            post_button = ('984 %d'):format(1920 - ime_height - 50)
+            post_button = ('984 %d'):format(1920 - ime_height - 100)
          end
       else
          if adb_input_method_is_null() then --         if adb dumpsys input_method | grep mServedInputConnection=null -q; then
@@ -995,6 +1024,11 @@ local function picture_to_weibo_share_upload(...)
    picture_to_weibo_share(pics)
 end
 
+local function picture_to_momo_share_upload(...)
+   local pics = upload_pics(...)
+   picture_to_momo_share(pics)
+end
+
 local function picture_to_weixin_share_upload(...)
    local pics = upload_pics(...)
    picture_to_weixin_share(pics)
@@ -1028,6 +1062,39 @@ picture_to_weibo_share = function(pics, ...)
       adb_event(i_button)
    end
    adb_event("adb-tap 141 1849 adb-tap 922 1891")
+end
+
+picture_to_momo_share = function(pics, ...)
+   if type(pics) ~= "table" then
+      pics = {pics, ...}
+   end
+
+   for i = 1, #pics do
+      local ext = last(pics[i]:gmatch("%.[^.]+"))
+      local target = pics[i]
+
+      if i == 1 then
+         local momoStart = "com.immomo.momo/com.immomo.momo.android.activity.WelcomeActivity"
+         local momoActivity = "com.immomo.momo/com.immomo.momo.android.activity.maintab.MaintabActivity"
+         adb_start_activity(momoStart)
+         for try = 1, 5 do
+            adb_event("sleep .2")
+            if not adb_is_window(momoActivity) then
+               adb_event("key back")
+               adb_start_activity(momoStart)
+            end
+         end
+         adb_event("sleep .2 adb-tap 288 1821 adb-tap 261 337 adb-tap 972 165 sleep 1")
+      end
+
+      local pic_share_buttons = {
+         "adb-tap 141 408", "adb-tap 387 368", "adb-tap 689 360", "adb-tap 913 324",
+         "adb-tap 142 687", "adb-tap 379 612",
+      }
+      local i_button = pic_share_buttons[i]
+      adb_event(i_button)
+   end
+   adb_event("adb-tap 404 1854 adb-tap 201 534")
 end
 
 local function picture_to_weixin_chat(pics, ...)
@@ -1200,6 +1267,11 @@ local function t1_follow_me()
    end
 end
 
+t1_call = function(number)
+   adb_shell("am start -a android.intent.action.DIAL tel:" .. number)
+   adb_event("adb-tap 554 1668")
+end
+
 local function t1_spread_it()
    check_phone()
    -- http://weibo.com/1611427581/Bviui9tzF
@@ -1237,6 +1309,8 @@ M.system = system
 M.debug = debug
 M.get_a_note = get_a_note
 M.adb_get_last_pic = adb_get_last_pic
+M.picture_to_momo_share = picture_to_momo_share_upload
+M.t1_call = t1_call
 
 local function do_it()
    if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
@@ -1271,6 +1345,21 @@ local function do_it()
       return M
    end
 end
+
+weixin_emojis = {
+   "/::)", "/::~", "/::B", "/::|", "/:8-)", "/::<", "/::$", "/::X", "/::Z", "/::'(",
+   "/::-|", "/::@", "/::P", "/::D", "/::O", "/::(", "/::+", "/:--b", "/::Q", "/::T",
+   "/:,@P", "/:,@-D", "/::d", "/:,@o", "/::g", "/:|-)", "/::!", "/::L", "/::>", "/::,@",
+   "/:,@f", "/::-S", "/:?", "/:,@x", "/:,@@", "/::8", "/:,@!", "/:!!!", "/:xx", "/:bye",
+   "/:wipe", "/:dig", "/:handclap", "/:&-(", "/:B-)", "/:<@", "/:@>", "/::-O", "/:>-|", "/:P-(",
+   "/::'|", "/:X-)", "/::*", "/:@x", "/:8*", "/:pd", "/:<W>", "/:beer", "/:basketb", "/:oo",
+   "/:coffee", "/:eat", "/:pig", "/:rose", "/:fade", "/:showlove", "/:heart", "/:break", "/:cake", "/:li",
+   "/:bome", "/:kn", "/:footb", "/:ladybug", "/:shit", "/:moon", "/:sun", "/:gift", "/:hug", "/:strong",
+   "/:weak", "/:share", "/:v", "/:@)", "/:jj", "/:@@", "/:bad", "/:lvu", "/:no", "/:ok",
+   "/:love", "/:<L>", "/:jump", "/:shake", "/:<O>", "/:circle", "/:kotow", "/:turn", "/:skip", "/:oY",
+   "/:#-0", "/:hiphot", "/:kiss", "/:<&", "/:&>",
+}
+
 qq_emojis = {
 [[]], [[(]], [[]], [[+]], [[]], [[	]], [[]], [[j]],
 [[#]], [[ú]], [[]], [[]], [[]], [[ ]], [[!]], [[ ]],
