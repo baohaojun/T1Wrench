@@ -1,9 +1,9 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt d332990162ab3f6278bccbb46d8dea85
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt 45ad675c7e8b1fe582246fb2a3c17b5a
 .gitignore https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.gitignore b2e64a38a923a152159f16707dfdd5c0
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 3d3a8ae0adfd61cef2387f627765d8f2
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 5621c8ad8b148a85f212491a8b093dbd
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash 2cbe4fcad44cebd511a67b3508bfefe0
 SetClip.apk https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/SetClip.apk a706f3f4202cc3187508b83ba2bf832c
-T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/T1Wrench ca2b7dcdcfbf688839ebff9e87d53a84
+T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/T1Wrench 8892d1749dfe2d34b7fca81bf1a42b51
 adb https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/adb 326e8abee168c19ce13d724b21c0687d
 base64.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/base64.lua 880ce578581ccf2f0fb07a3d37b021f2
 contacts.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/contacts.lua 93eca8453482640ca72b41a30645cf59
@@ -12,4 +12,4 @@ setclip.apk.md5 https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/setclip
 t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.lua 3dcead9f94533f543b1c9d58e62f507d
 test.vcf https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/test.vcf 13f9f3c867e47e0ced7bd3490d903859
 uc-to-py.tbl https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/uc-to-py.tbl 1c65d3a7035603fefffcad5e4018fd23
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 ee3750839783a53495d98defab53cbfb
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 18649ef705f819d2fb5af4a6257aba46
