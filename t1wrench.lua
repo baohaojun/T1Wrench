@@ -1,18 +1,26 @@
 #!/usr/bin/lua
 
+-- module
+local M
+
 -- functions
-local t1_call
+local t1_call, t1_run, t1_adb_mail, t1_save_mail_heads
 local shell_quote, putclip, t1_post
 local adb_start_activity
 local picture_to_weixin_share, picture_to_weibo_share
-local picture_to_momo_share
+local picture_to_momo_share, t1_add_mms_receiver
 local adb_get_input_window_dump, adb_top_window
 local adb_start_weixin_share, adb_is_window
 local adb_focused_window
 local t1_config, check_phone
 local emoji_for_qq, debug, get_a_note, emoji_for_weixin, emoji_for_qq_or_weixin
-local adb_get_last_pic
+local adb_get_last_pic, debugging
+
 -- variables
+local where_is_dial_key
+local rows_mail_att_finder
+local UNAME_CMD = "uname || busybox uname || { echo -n Lin && echo -n ux; }"
+local is_debugging = true
 local using_scroll_lock = true
 local using_adb_root
 local adb_unquoter
@@ -123,6 +131,12 @@ local function system(cmds)
          end
       end
       return os.execute(debug_set_x .. command_str)
+   end
+end
+
+debugging = function(fmt, ...)
+   if is_debugging then
+      debug(fmt, ...)
    end
 end
 
@@ -260,10 +274,6 @@ adb_focused_window = function()
    error("Can't find focused window: " .. wdump:sub(1, 20))
 end
 
-local function select_args(args)
-   return args[1]
-end
-
 local function adb_event(events)
    if type(events) == 'string' then
       adb_event(split(" ", events))
@@ -358,18 +368,23 @@ local function sleep(time)
 end
 
 local function weibo_text_share(window)
+   local repost = '?'
    if window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" then
-      repost = select_args{'repost', 'comment'}
-      if repost == 'repost' then
+      repost = select_args{'转发还是评论', '转发', '评论', '转发并评论'}
+      if repost:match('转发') then
+         debugging("doing post")
          adb_tap_bot_left()
       else
          adb_tap_mid_bot()
       end
-      sleep(.5)
+      sleep(1)
    end
    local input_method, ime_height = adb_get_input_window_dump()
    if ime_height ~= 0 then
       adb_event("key back")
+   end
+   if repost:match('并') then
+      adb_event("sleep .1 adb-tap 57 1704")
    end
    if using_scroll_lock then
       adb_event{'key', 'scroll_lock', 991, 166}
@@ -595,8 +610,10 @@ adb_get_input_window_dump = function()
    for i = 1, #dump do
       if not started and dump[i]:match("^%s*Window #?%d* ?Window{[a-f0-9]+.*%sInputMethod") then
          started = true
+         debugging("started is true")
       end
       if started == true then
+         debugging("got a line: %s", dump[i])
          input_method[#input_method + 1] = dump[i]
          if dump[i]:match("^%s*mHasSurface") then
             started = false
@@ -631,7 +648,7 @@ local function adb_input_method_is_null()
 end
 
 check_phone = function()
-   if not adb_pipe("uname || busybox uname"):match("Linux") then
+   if not adb_pipe(UNAME_CMD):match("Linux") then
       error("Error: can't put text on phone, not connected?")
    end
 end
@@ -674,7 +691,7 @@ end
 t1_config = function()
    -- install the apk
    system(the_true_adb .. " devices")
-   local uname = adb_pipe("uname || busybox uname")
+   local uname = adb_pipe(UNAME_CMD)
    if not uname:match("Linux") then
       local home = os.getenv("HOME")
       if is_windows then
@@ -866,6 +883,20 @@ t1_post = function(text) -- use weixin
    if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" or window == "com.immomo.momo/com.immomo.momo.android.activity.feed.PublishFeedActivity" then
       weibo_text_share(window)
       return
+   elseif window == "com.google.android.gm/com.google.android.gm.ConversationListActivityGmail" then
+      local how = select_args{"请选择回复方法", "单独回复", "群体回复", "手动回复"}
+      if how == "单独回复" then
+         adb_event("key dpad_down key dpad_down key tab key tab key enter sleep 1")
+      elseif how == "群体回复" then
+         adb_event("key dpad_down key tab key dpad_down key enter key enter key tab key tab key enter sleep 1")
+      else
+         adb_event("sleep 1")
+      end
+      t1_post()
+      return
+   elseif window == "com.google.android.gm/com.google.android.gm.ComposeActivityGmail" then
+      adb_event("key scroll_lock adb-tap 870 173")
+      return
    elseif window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsUploadUI" or window == "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsCommentUI" then
       weixin_text_share(window, text)
       return
@@ -905,13 +936,15 @@ t1_post = function(text) -- use weixin
          end
       else
          if adb_input_method_is_null() then --         if adb dumpsys input_method | grep mServedInputConnection=null -q; then
-            add = '560 1840 sleep .1 997 1199 sleep .1'
+            add = '560 1840 sleep .1 key back sleep .1'
          end
       end
 
       if window == "com.github.mobile/com.github.mobile.ui.issue.CreateCommentActivity" then
          post_button = '954 166'
       end
+
+      debugging("add is %s", add)
 
       if using_scroll_lock then
          adb_event(string.format("%s key scroll_lock %s", add, post_button))
@@ -1267,9 +1300,109 @@ local function t1_follow_me()
    end
 end
 
+t1_save_mail_heads = function(file, subject, to, cc, bcc, attachments)
+   local f = io.open(file, "w")
+   f:write(('t1_load_mail_heads([[%s]], [[%s]], [[%s]], [[%s]], [[%s]])'):format(subject, to, cc, bcc, attachments))
+   f:close()
+   debug("hello saving to %s t1_save_mail_heads", file)
+end
+
+t1_adb_mail = function(subject, to, cc, bcc, attachments)
+   adb_shell("am start -n com.android.email/com.android.email.activity.ComposeActivityEmail mailto:; sleep 1; mkdir -p /sdcard/adb-mail")
+
+   adb_event("adb-tap 842 434")
+
+   if attachments:gsub("%s", "") ~= "" then
+      local files = split("\n", attachments)
+      for i in ipairs(files) do
+         local file = files[i]
+         adb_event"adb-tap 993 883"
+
+         if not rows_mail_att_finder or rows_mail_att_finder == "手动点" then
+            rows_mail_att_finder = select_args{"有几行邮件附件添加应用图标？", "一行", "两行", "手动点（训练）"}
+         end
+         if rows_mail_att_finder == "一行" then
+            adb_event"adb-tap 201 1760"
+         elseif rows_mail_att_finder == "两行" then
+            adb_event"adb-tap 153 1455"
+         else
+            select_args{"手动点完之后请回车", "请回车", "请回车!"}
+         end
+
+
+         local target = file:gsub(".*[\\/]", "")
+         target = "/sdcard/adb-mail/" .. i .. "." .. target
+         system{the_true_adb, "push", file, target}
+         putclip(target)
+
+         local window = adb_focused_window()
+         if window ~= "org.openintents.filemanager/org.openintents.filemanager.IntentFilterActivity" then
+            window = window:gsub("/.*", "")
+            error("必须安装并使用OI文件管理器才能选择附件，你使用的是： " .. window)
+         end
+         adb_event"adb-swipe-300 54 273 800 273"
+         adb_event"adb-tap 54 273"
+         adb_event"key back key scroll_lock"
+         adb_event"adb-tap 959 1876 sleep 1"
+      end
+   end
+   local insert_text = function(contact)
+      if contact ~= "" then
+         putclip(contact)
+         adb_event"key scroll_lock"
+      end
+      adb_event"key DPAD_DOWN"
+   end
+   adb_event"adb-tap 247 287"
+   insert_text(to)
+   insert_text(cc)
+   insert_text(bcc)
+   insert_text(subject)
+
+   adb_event"key DPAD_UP key DPAD_UP"
+end
+
 t1_call = function(number)
    adb_shell("am start -a android.intent.action.DIAL tel:" .. number)
-   adb_event("adb-tap 554 1668")
+   if not where_is_dial_key then
+      where_is_dial_key = select_args{"拨号键在哪儿呢？", "中间", "左数第一个", "左数第二个"}
+   end
+   debug("where_is_dial_key is %s", where_is_dial_key)
+   if where_is_dial_key == "中间" then
+      adb_event("adb-tap 554 1668")
+   elseif where_is_dial_key == "左数第一个" then
+      adb_event"adb-tap 156 1633"
+   elseif where_is_dial_key == "左数第二个" then
+      adb_event"adb-tap 420 1634"
+   else
+      where_is_dial_key = nil
+   end
+end
+
+t1_add_mms_receiver = function(number)
+   while adb_is_window('com.android.mms/com.android.mms.ui.ComposeMessageActivity') do
+      adb_event("key back sleep .1")
+   end
+   adb_shell("am start -n com.android.mms/com.android.mms.ui.ComposeMessageActivity")
+
+   putclip(number .. ',')
+
+   adb_event("sleep 1 key scroll_lock")
+   return "请在小扳手文字输入区输入短信内容并发送"
+end
+
+t1_run = function (file)
+   local ext = file:gsub(".*%.", "")
+   if ext ~= "twa" and ext ~= "小扳手" then
+      return "Can not run this script, must be a .twa file"
+   end
+   local f = loadfile(file)
+   for k, v in pairs(M) do
+      if not _ENV[k] then
+         _ENV[k] = v
+      end
+   end
+   f()
 end
 
 local function t1_spread_it()
@@ -1288,7 +1421,7 @@ local function t1_spread_it()
    end
 end
 
-local M = {}
+M = {}
 M.putclip = putclip
 M.t1_post = t1_post
 M.adb_shell = adb_shell
@@ -1311,6 +1444,10 @@ M.get_a_note = get_a_note
 M.adb_get_last_pic = adb_get_last_pic
 M.picture_to_momo_share = picture_to_momo_share_upload
 M.t1_call = t1_call
+M.t1_run = t1_run
+M.t1_add_mms_receiver = t1_add_mms_receiver
+M.t1_adb_mail = t1_adb_mail
+M.t1_save_mail_heads = t1_save_mail_heads
 
 local function do_it()
    if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
