@@ -40,6 +40,23 @@ local qq_emojis, weixin_emojis
 local sdk_version = 19
 local emojis, emojis_map
 local the_true_adb = "./the-true-adb"
+local command_am_start_putclip =
+   [[
+         am startservice --user 0 -n com.bhj.setclip/.PutClipService&
+         wait;
+   ]]
+local command_wait_putclip_text_gone =
+   [[
+       for x in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+          if test -e /sdcard/putclip.txt; then
+             sleep .1 || busybox sleep .1;
+             echo haha $x;
+          else
+             echo wait putclip done;
+             break;
+         fi;
+      done;
+   ]]
 
 local qq_emoji_table = {
    "微笑", "撇嘴", "色", "发呆", "得意", "流泪", "害羞", "闭嘴",
@@ -238,7 +255,22 @@ local function adb_shell(cmds)
    return adb_do(os.execute, cmds)
 end
 
+local function adb_shell_bg(cmds)
+   if is_windows then
+      return adb_shell(cmds)
+   else
+      return adb_do(function(str) return os.execute(str .. "&") end, cmds)
+   end
+end
+
 local function adb_pipe(cmds)
+   local str_cmds = cmds
+   if type(cmds) == "table" then
+      str_cmds = join(" ", cmds)
+   end
+   str_cmds = ('"%s"'):format(str_cmds)
+
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:273: before pipe: " .. str_cmds)
    local pipe = adb_do(io.popen, cmds)
    if not pipe then
       return ""
@@ -247,6 +279,7 @@ local function adb_pipe(cmds)
    if not out then
       return ""
    end
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:282: after pipe: " .. str_cmds)
    return out:gsub("\r", "")
 end
 
@@ -268,10 +301,7 @@ adb_focused_window = function()
    if match then
       return match
    end
-   if check_phone() or true then
-      return adb_focused_window()
-   end
-   error("Can't find focused window: " .. wdump:sub(1, 20))
+   return adb_focused_window()
 end
 
 local function adb_event(events)
@@ -321,6 +351,9 @@ local function adb_event(events)
          end
          i = i + 3
       elseif events[i] == 'key' or events[i] == 'adb-key' then
+         if (events[i+1]):lower() == "scroll_lock" then
+            command_str = command_str .. command_wait_putclip_text_gone
+         end
          command_str = command_str .. ('input keyevent %s;'):format(events[i+1]:upper())
          i = i + 2
       elseif events[i] == 'sleep' then
@@ -672,20 +705,20 @@ putclip = function(text)
    end
    file:write(text)
    file:close()
-   check_phone()
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:708: xx")
    system{the_true_adb, 'push', path, '/sdcard/putclip.txt'}
-   adb_shell(
-      [[
-               am startservice --user 0 -n com.bhj.setclip/.PutClipService&
-               for x in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-                  if test -e /sdcard/putclip.txt; then
-                     sleep .1 || busybox sleep .1;
-                     echo $x;
-                  else
-                     exit;
-                 fi;
-              done
-      ]])
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:710: xx")
+
+   if using_scroll_lock == true then
+      adb_shell_bg(
+         command_am_start_putclip
+      )
+   else
+      adb_shell(
+         command_am_start_putclip .. command_wait_putclip_text_gone
+      )
+   end
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:721: xx")
 end
 
 t1_config = function()
@@ -869,7 +902,9 @@ adb_get_last_pic = function(which, remove)
 end
 
 t1_post = function(text) -- use weixin
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:905: xx")
    local window = adb_focused_window()
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:907: xx")
    if text then
       if window:match("com.tencent.mobileqq") then
          putclip(emoji_for_qq(text))
@@ -879,6 +914,7 @@ t1_post = function(text) -- use weixin
          putclip(text)
       end
    end
+   system("dates --rfc-3339=ns") system("echo t1wrench.lua:917: xx")
    if window then print("window is " .. window) end
    if window == "com.sina.weibo/com.sina.weibo.EditActivity" or window == "com.sina.weibo/com.sina.weibo.DetailWeiboActivity" or window == "com.immomo.momo/com.immomo.momo.android.activity.feed.PublishFeedActivity" then
       weibo_text_share(window)
@@ -1452,7 +1488,7 @@ M.t1_save_mail_heads = t1_save_mail_heads
 local function do_it()
    if arg and type(arg) == 'table' and string.find(arg[0], "t1wrench.lua") then
       -- t1_post(join(' ', arg))
-      local file = io.open("setclip.apk.md5")
+      local file = io.open("setclip.apk.md5x")
       if file then
          t1_config()
          file:close()
@@ -1471,6 +1507,7 @@ local function do_it()
          debug("cmd is %s", cmd)
          loadstring(cmd)()
       end
+      system("dates --rfc-3339=ns") system("echo t1wrench.lua:1510: xx")
       os.exit(0)
       t1_picture(arg[1]) -- , arg[2], arg[3], arg[4], arg[5], arg[6], arg[7], arg[8], arg[9])
       os.exit(0)
