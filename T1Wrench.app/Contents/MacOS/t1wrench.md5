@@ -1,12 +1,12 @@
 ../Info.plist https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/Info.plist 007adc7aa14e97ad46ad36f8b13f8705
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.bin-version.txt 1afaf197b56623e3f381d4e1d8addb8b
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.src-version.txt a25ce0012fe065dd2415f9461b5085b9
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.bin-version.txt 160a4a3815826835b1d0aba549ed7f87
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.src-version.txt 77cc1cf9e94e46c50b9150aca6237db6
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/.start-upgrade.hash 8ff6d560db02e5fb361413fa839cdd34
 CallMyLove.twa https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/CallMyLove.twa b71dbcf3559bcfa2fd1c4da57293cd62
 SetClip.apk https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/SetClip.apk 58a56483fc43de80b343aab3c5763065
-T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/T1Wrench 03fca5e07170dabf43f85913f21a6685
+T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/T1Wrench 4e3bfe800c0f565d8f6683cf8dbf78dc
 base64.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/base64.lua 880ce578581ccf2f0fb07a3d37b021f2
-contacts.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/contacts.lua e55b1d8340249f6cabff41d635c8741a
+contacts.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/contacts.lua 57963126de91bf6f1f359c0fd3f4bb67
 download https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/download 33c09936808eca08459fa20f77f0d1a4
 emojis.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/emojis.lua 3101badd7fe77943c1fbeaeb9ce8e01f
 lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/lua 8f40468d816080fa72eab3d7eb7d29cd
@@ -14,8 +14,8 @@ luac https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Conte
 md5/core.so https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/md5/core.so 3c31ed1f327a5a55e13c25e9fd340c55
 md5/des56.so https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/md5/des56.so b8d886e597828bdce72f813d636c8cd2
 setclip.apk.md5 https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/setclip.apk.md5 d38985810ae625c9e85360f08e4f29bd
-t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.lua a9d235dc7c33a33036a30a67a1860f56
+t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.lua aa63ac01064a329040099c90e4418b45
 test.vcf https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/test.vcf 13f9f3c867e47e0ced7bd3490d903859
 uc-to-py.tbl https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/uc-to-py.tbl 1c65d3a7035603fefffcad5e4018fd23
 ../Resources/T1Wrench.icns https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/Resources/T1Wrench.icns e3f757a9facf4316871ace2bb9432776
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.md5 2e96e399b877ebcfdcf38bedda6e949d
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-macos/T1Wrench.app/Contents/MacOS/t1wrench.md5 ecc4808337173e7b8da15d309a4a188a
