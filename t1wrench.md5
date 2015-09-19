@@ -1,14 +1,14 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt fab28f8d865d072e3d320778da75590c
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt 560fd75460b0611e6bcccfc128e52ce0
 .gitignore https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.gitignore 3e2ce3743131b1198602b00093783856
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 66687228608951727b7a7946c37baacc
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 8f980d683a7b18e6ea6786a083c1f368
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash 2cbe4fcad44cebd511a67b3508bfefe0
 CallMyLove.twa https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/CallMyLove.twa b71dbcf3559bcfa2fd1c4da57293cd62
 SetClip.apk https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/SetClip.apk b437b64805051f40ca8a77f3680194a6
-T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/T1Wrench 23d60cf233e1957906a0b6fd59f61eac
+T1Wrench https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/T1Wrench edc1ecbb4642b344e69a6b55e8634b2f
 adb https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/adb 326e8abee168c19ce13d724b21c0687d
 base64.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/base64.lua 880ce578581ccf2f0fb07a3d37b021f2
 contacts.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/contacts.lua 57963126de91bf6f1f359c0fd3f4bb67
-download https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/download 74308f330536cbc4f4b6238837681f75
+download https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/download 2872446054fd408e9652fa96567796ca
 emacs-weixin.sh https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/emacs-weixin.sh 3ae60052ffe2b0fb674a83cd3702c2d5
 emojis.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/emojis.lua 4ff4c9bdf5b725058cf7e9c26ba0fe86
 register-t1wrench.sh https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/register-t1wrench.sh 51aaafa404406300dce8287a30d7169b
@@ -17,4 +17,4 @@ t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.l
 t1wrench.mime.xml https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.mime.xml dea072fa064bdf034989daed3c7b2b9d
 test.vcf https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/test.vcf 13f9f3c867e47e0ced7bd3490d903859
 uc-to-py.tbl https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/uc-to-py.tbl 1c65d3a7035603fefffcad5e4018fd23
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 83441677fec5b1e631f81d4b9a772714
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 f5994950fc9f2ee15a3df191f0f0390d
