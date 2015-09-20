@@ -1,6 +1,6 @@
-.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt d1184d6376564dbf87415c7d22e614bd
+.bin-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.bin-version.txt c12fdb7c3850a29f7704d0757aabbd68
 .gitignore https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.gitignore 3e2ce3743131b1198602b00093783856
-.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 3511d50202d37e13ffc2ea60c5465d2b
+.src-version.txt https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.src-version.txt 500dc0fd2ca249b2a9bbd3dc5f0fc63c
 .start-upgrade.hash https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/.start-upgrade.hash 2cbe4fcad44cebd511a67b3508bfefe0
 CallMyLove.twa https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/CallMyLove.twa b71dbcf3559bcfa2fd1c4da57293cd62
 SetClip.apk https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/SetClip.apk b437b64805051f40ca8a77f3680194a6
@@ -17,4 +17,4 @@ t1wrench.lua https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.l
 t1wrench.mime.xml https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.mime.xml dea072fa064bdf034989daed3c7b2b9d
 test.vcf https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/test.vcf 13f9f3c867e47e0ced7bd3490d903859
 uc-to-py.tbl https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/uc-to-py.tbl 1c65d3a7035603fefffcad5e4018fd23
-myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 6998e1279a3e28567bc799b02430fc59
+myself https://github.com/baohaojun/T1Wrench/raw/T1Wrench-linux/t1wrench.md5 804cf1a6e34d5c103b2235bc384541bf
