@@ -752,11 +752,11 @@ adb_start_service_and_wait_file_gone = function(service_cmd, file)
 end
 
 adb_start_service_and_wait_file = function(service_cmd, file)
+   adb_shell("rm " .. file)
+   adb_am("am startservice --user 0 -n " .. service_cmd)
    adb_shell(
       (
       [[
-            rm %s;
-            am startservice --user 0 -n %s&
             for x in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
                if test ! -e %s; then
                   sleep .1 || busybox sleep .1;
@@ -764,7 +764,7 @@ adb_start_service_and_wait_file = function(service_cmd, file)
                   exit;
                fi;
             done
-      ]]):format(file, service_cmd, file))
+      ]]):format(file))
 end
 
 push_text = function(text)
