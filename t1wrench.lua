@@ -5,6 +5,7 @@ local M
 
 -- functions
 local t1_call, t1_run, t1_adb_mail, t1_save_mail_heads
+local adb_push, adb_pull, adb_install
 local shell_quote, putclip, t1_post, push_text
 local adb_start_activity
 local picture_to_weixin_share, picture_to_weibo_share
@@ -23,7 +24,7 @@ local adb_start_service_and_wait_file, adb_am
 local wait_input_target, wait_top_activity, wait_top_activity_match
 local t1_eval, log, share_pics_to_app, share_text_to_app
 local picture_to_weibo_comment
-local check_scroll_lock
+local check_scroll_lock, prompt_user
 
 -- variables
 local where_is_dial_key
@@ -54,6 +55,8 @@ local weixinLauncherActivity = "com.tencent.mm/com.tencent.mm.ui.LauncherUI"
 local weixinSnsUploadActivity = "com.tencent.mm/com.tencent.mm.plugin.sns.ui.SnsUploadUI"
 local weixinImagePreviewActivity = "com.tencent.mm/com.tencent.mm.plugin.gallery.ui.ImagePreviewUI"
 local weiboShareActivity = "com.sina.weibo/com.sina.weibo.composerinde.OriginalComposerActivity"
+local emailSmartisanActivity = "com.android.email/com.android.email.activity.ComposeActivityEmail"
+local oiFileChooseActivity = "org.openintents.filemanager/org.openintents.filemanager.IntentFilterActivity"
 local weiboCommentActivity = "com.sina.weibo/com.sina.weibo.composerinde.CommentComposerActivity"
 local weiboForwardActivity = "com.sina.weibo/com.sina.weibo.composerinde.ForwardComposerActivity"
 local qqChatActivity = "com.tencent.mobileqq/com.tencent.mobileqq.activity.ChatActivity"
@@ -88,12 +91,7 @@ for i in ipairs(qq_emoji_table) do
    qq_emoji_table[qq_emoji_table[i]] = i;
 end
 
-local p = io.popen("the-true-adb version")
-local v = p:read("*a")
 adb_unquoter = ""
-if v:match("1.0.31") then
-   adb_unquoter = '\\"'
-end
 
 if package.config:sub(1, 1) == '/' then
    shell_quote = function (str)
@@ -442,6 +440,12 @@ local function sleep(time)
    adb_event(("sleep %s"):format(time))
 end
 
+prompt_user = function(txt)
+   if select_args then
+      return select_args{txt}
+   end
+end
+
 check_scroll_lock = function()
    if using_scroll_lock then
       return
@@ -626,13 +630,13 @@ end
 local function t1_mail(window)
    if window == 'com.android.email/com.android.email.activity.Welcome' or window == 'com.android.email/com.android.email2.ui.MailActivityEmail' then
       adb_tap_mid_bot()
-      sleep(2)
+      wait_input_target("com.android.email/com.android.mail.compose.ComposeActivity")
    end
-   adb_event{'key', 'scroll_lock'}
+   adb_event("key scroll_lock sleep .2")
    if window == 'com.google.android.gm/com.google.android.gm.ComposeActivityGmail' then
       adb_event{806, 178}
    else
-      adb_event("sleep .1 adb-tap 998 174")
+      adb_event("adb-tap 998 174")
    end
 end
 
@@ -743,19 +747,61 @@ adb_start_service_and_wait_file_gone = function(service_cmd, file)
 end
 
 adb_start_service_and_wait_file = function(service_cmd, file)
-   adb_shell(
+   local res = adb_pipe(
       (
-      [[
+         [[
             rm %s;
             am startservice --user 0 -n %s&
             for x in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
                if test ! -e %s; then
                   sleep .1 || busybox sleep .1;
                else
+                  echo -n ye && echo s
                   exit;
                fi;
             done
       ]]):format(file, service_cmd, file))
+   if res:match("yes") then
+      return true
+   else
+      return false
+   end
+end
+
+adb_push = function(lpath, rpath)
+   if type(lpath) == 'table' then
+      if #lpath ~= 2 then
+         error("invalid adb_push call")
+      end
+      lpath, rpath = lpath[1], lpath[2]
+   end
+   if qt_adb_push then
+      qt_adb_push{lpath, rpath}
+   else
+      system{the_true_adb, 'push', lpath, rpath}
+   end
+end
+
+adb_pull = function(rpath, lpath)
+   if type(rpath) == 'table' then
+      if #rpath ~= 2 then
+         error("invalid adb_pull call")
+      end
+      rpath, lpath = rpath[1], rpath[2]
+   end
+   if qt_adb_pull then
+      qt_adb_pull{rpath, lpath}
+   else
+      system{the_true_adb, 'pull', rpath, lpath}
+   end
+end
+
+adb_install = function(apk)
+   if qt_adb_install then
+      return qt_adb_install{apk}
+   else
+      return io.popen(the_true_adb .. " install -r " .. apk):read("*a")
+   end
 end
 
 push_text = function(text)
@@ -778,7 +824,7 @@ push_text = function(text)
    file:write(text)
    file:close()
    check_phone()
-   system{the_true_adb, 'push', path, '/sdcard/putclip.txt'}
+   adb_push{path, '/sdcard/putclip.txt'}
 end
 
 putclip = function(text)
@@ -796,10 +842,10 @@ local check_file_pushed = function(file, md5)
    debugging("on phone: %s, local: %s", md5_on_phone, md5_on_PC)
    if md5_on_phone ~= md5_on_PC then
       log("需要把" .. file .. "上传到手机。")
-      system(("%s push %s /data/data/com.android.shell/%s.bak"):format(the_true_adb, file, file))
-      system(("%s shell mv /data/data/com.android.shell/%s.bak /data/data/com.android.shell/%s"):format(the_true_adb, file, file))
+      adb_push{file, "/data/data/com.android.shell/" .. file .. ".bak"}
+      adb_shell(("mv /data/data/com.android.shell/%s.bak /data/data/com.android.shell/%s"):format(file, file))
 
-      system(("%s push %s /sdcard/%s"):format(the_true_adb, md5, md5))
+      adb_push{md5, "/sdcard/" .. md5}
       local md5_on_phone = adb_pipe("cat /sdcard/" .. md5)
       md5_on_phone = md5_on_phone:gsub("\n", "")
       if md5_on_phone ~= md5_on_PC then
@@ -820,9 +866,9 @@ local check_apk_installed = function(apk, md5)
    debugging("on phone: %s, local: %s", md5_on_phone, md5_on_PC)
    if md5_on_phone ~= md5_on_PC then
       log("需要在手机上安装小扳手辅助应用" .. apk .. "，请确保手机允许安装未知来源的apk。")
-      local install_output = io.popen(the_true_adb .. " install -r " .. apk):read("*a")
-      if install_output:match("\nSuccess\r?\n") then
-         system(("%s push %s /sdcard/%s"):format(the_true_adb, md5, md5))
+      local install_output = adb_install(apk)
+      if install_output:match("\nSuccess") then
+         adb_push{md5, "/sdcard/" .. md5}
          local md5_on_phone = adb_pipe("cat /sdcard/" .. md5)
          md5_on_phone = md5_on_phone:gsub("\n", "")
          if md5_on_phone ~= md5_on_PC then
@@ -840,7 +886,14 @@ end
 
 t1_config = function()
    -- install the apk
-   system(the_true_adb .. " devices")
+   if not qt_adb_pipe then
+      local p = io.popen("the-true-adb version")
+      local v = p:read("*a")
+      if v:match("1.0.31") then
+         adb_unquoter = '\\"'
+      end
+   end
+
    local uname = adb_pipe(UNAME_CMD)
    if not uname:match("Linux") then
       local home = os.getenv("HOME")
@@ -876,7 +929,7 @@ t1_config = function()
          end
          ini_file:write("0x29a9\n")
          ini_file:close()
-         system{the_true_adb, "kill-server"}
+         adb_kill_server()
          error("Done config for your adb devices, please try again")
       else
          error("No phone found, can't set up, uname is: " .. uname)
@@ -887,8 +940,11 @@ t1_config = function()
 
    local weixin_phone_file, _, errno = io.open("weixin-phones.txt", "rb")
    if not vcf_file then
-      adb_start_service_and_wait_file("com.bhj.setclip/.PutClipService --ei listcontacts 1", "/sdcard/listcontacts.txt")
-      system(the_true_adb .. " pull /sdcard/listcontacts.txt weixin-phones.txt")
+      if adb_start_service_and_wait_file("com.bhj.setclip/.PutClipService --ei listcontacts 1", "/sdcard/listcontacts.txt") then
+         adb_pull{"/sdcard/listcontacts.txt", "weixin-phones.txt"}
+      else
+         log("无法同步微信联系人")
+      end
    end
 
    sdk_version = adb_pipe("getprop ro.build.version.sdk")
@@ -965,9 +1021,9 @@ adb_get_last_pic = function(which, remove)
    adb_start_service_and_wait_file("com.bhj.setclip/.PutClipService --ei get-last-note-pic 1", "/sdcard/putclip.txt")
    local pic = adb_pipe("cat /sdcard/putclip.txt")
    pic = pic:gsub('^/storage/emulated/0', '/sdcard')
-   system{the_true_adb, "pull", pic, ("last-pic-%s.png"):format(which)}
+   adb_pull{pic, ("last-pic-%s.png"):format(which)}
    if remove then
-      system{the_true_adb, "shell", "rm", pic}
+      adb_shell{rm, pic}
       adb_am(("am startservice --user 0 -n com.bhj.setclip/.PutClipService --es picture %s"):format(pic))
    end
 end
@@ -1031,7 +1087,7 @@ t1_post = function(text) -- use weixin
    elseif window == "com.android.email/com.android.mail.compose.ComposeActivity" or
       window == "com.android.email/com.android.email.activity.Welcome" or
       window == "com.android.email/com.android.email2.ui.MailActivityEmail" or
-   window == "com.android.email/com.android.email.activity.ComposeActivityEmail" then
+   window == emailSmartisanActivity then
       t1_mail(window)
       return
    elseif string.match(window, "^PopupWindow:") then
@@ -1093,7 +1149,7 @@ local function upload_pics(...)
       local ext = last(pics[i]:gmatch("%.[^.]+"))
       local target = ('/sdcard/DCIM/Camera/t1wrench-%d-%d%s'):format(time, i, ext)
       targets[#targets + 1] = target
-      system{the_true_adb, 'push', pics[i], target}
+      adb_push{pics[i], target}
       adb_am{"am", "startservice", "--user", "0", "-n", "com.bhj.setclip/.PutClipService", "--es", "picture", target}
    end
    return targets
@@ -1477,9 +1533,10 @@ t1_save_mail_heads = function(file, subject, to, cc, bcc, attachments)
 end
 
 t1_adb_mail = function(subject, to, cc, bcc, attachments)
-   adb_am("am start -n com.android.email/com.android.email.activity.ComposeActivityEmail mailto:; sleep 1; mkdir -p /sdcard/adb-mail")
+   adb_am("am start -n " .. emailSmartisanActivity .. " mailto:; mkdir -p /sdcard/adb-mail")
+   wait_input_target(emailSmartisanActivity)
 
-   adb_event("sleep .5 adb-tap 842 434 sleep .5")
+   adb_event("adb-tap 842 434 sleep 1.5") -- 展开
 
    if attachments:gsub("%s", "") ~= "" then
       local files = split("\n", attachments)
@@ -1501,12 +1558,13 @@ t1_adb_mail = function(subject, to, cc, bcc, attachments)
 
          local target = file:gsub(".*[\\/]", "")
          target = "/sdcard/adb-mail/" .. i .. "." .. target
-         system{the_true_adb, "push", file, target}
+         adb_push{file, target}
          target = "../../../../../.." .. target
          putclip(target)
 
+         wait_input_target(oiFileChooseActivity)
          local window = adb_focused_window()
-         if window ~= "org.openintents.filemanager/org.openintents.filemanager.IntentFilterActivity" then
+         if window ~= oiFileChooseActivity then
             window = window:gsub("/.*", "")
             error("必须安装并使用OI文件管理器才能选择附件，你使用的是： " .. window)
          end
@@ -1517,7 +1575,7 @@ t1_adb_mail = function(subject, to, cc, bcc, attachments)
    local insert_text = function(contact)
       if contact ~= "" then
          putclip(contact)
-         adb_event"key scroll_lock"
+         adb_event"key scroll_lock sleep .5"
       end
       adb_event"key DPAD_DOWN"
    end
